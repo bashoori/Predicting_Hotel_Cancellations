@@ -113,6 +113,7 @@ Read in the data.
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import seaborn as sns
 import os
 hotels = pd.read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-11/hotels.csv')
@@ -134,7 +135,35 @@ hotels.describe(exclude=[np.number]).T
     ## reservation_status       119390      3   Check-Out   75166
     ## reservation_status_date  119390    926  2015-10-21    1461
 
-# Data Cleaning
+``` python
+hotels.describe(include=[np.number]).T
+```
+
+    ##                                    count         mean  ...     75%     max
+    ## is_canceled                     119390.0     0.370416  ...     1.0     1.0
+    ## lead_time                       119390.0   104.011416  ...   160.0   737.0
+    ## arrival_date_year               119390.0  2016.156554  ...  2017.0  2017.0
+    ## arrival_date_week_number        119390.0    27.165173  ...    38.0    53.0
+    ## arrival_date_day_of_month       119390.0    15.798241  ...    23.0    31.0
+    ## stays_in_weekend_nights         119390.0     0.927599  ...     2.0    19.0
+    ## stays_in_week_nights            119390.0     2.500302  ...     3.0    50.0
+    ## adults                          119390.0     1.856403  ...     2.0    55.0
+    ## children                        119386.0     0.103890  ...     0.0    10.0
+    ## babies                          119390.0     0.007949  ...     0.0    10.0
+    ## is_repeated_guest               119390.0     0.031912  ...     0.0     1.0
+    ## previous_cancellations          119390.0     0.087118  ...     0.0    26.0
+    ## previous_bookings_not_canceled  119390.0     0.137097  ...     0.0    72.0
+    ## booking_changes                 119390.0     0.221124  ...     0.0    21.0
+    ## agent                           103050.0    86.693382  ...   229.0   535.0
+    ## company                           6797.0   189.266735  ...   270.0   543.0
+    ## days_in_waiting_list            119390.0     2.321149  ...     0.0   391.0
+    ## adr                             119390.0   101.831122  ...   126.0  5400.0
+    ## required_car_parking_spaces     119390.0     0.062518  ...     0.0     8.0
+    ## total_of_special_requests       119390.0     0.571363  ...     1.0     5.0
+    ## 
+    ## [20 rows x 8 columns]
+
+Cleaning the unmentionables.
 
 ``` python
 # convert 'NULL' entries to np.nan
@@ -188,9 +217,12 @@ hotels.market_segment.value_counts().plot.bar(ax=ax)
 ax.set_xlabel('Market Segment')
 ax.set_ylabel('Count')
 ax.set_title('Booking source', fontsize = 15, weight = 'bold')
+for tick in ax.get_xticklabels():
+    tick.set_rotation(45)
+plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 # Exploratory Data Analysis:
 
@@ -267,26 +299,28 @@ not_canceled = hotels[hotels.is_canceled == 0]
 ```
 
 ``` python
-fig, ax = plt.subplots(3, figsize=(10, 8), sharex=True, sharey=True, gridspec_kw={'hspace': 0.5})
-hotels.lead_time.hist(ax=ax[0], bins = 30)
-canceled.lead_time.hist(ax=ax[1], bins = 30)
-not_canceled.lead_time.hist(ax=ax[2], bins = 30)
-ax[0].set_title('All Bookings')
-ax[1].set_title('Canceled')
-ax[2].set_title('Not Canceled')
-for ax in ax.flat:
-    ax.set(xlabel='Lead Time', ylabel='Count')
+red_point = dict(markerfacecolor='r', marker='p')
+# boxplot of lead time for canceled and not canceled bookings
+fig, ax = plt.subplots(2, figsize=(10, 4), sharex=True, sharey=True, gridspec_kw={'hspace': 0})
+ax[0].boxplot(canceled.lead_time, vert=False, flierprops=red_point)
 ```
 
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'Lead Time')]
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'Lead Time')]
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'Lead Time')]
+    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a1f0ea390>, <matplotlib.lines.Line2D object at 0x1a1ef67810>], 'caps': [<matplotlib.lines.Line2D object at 0x1a1f0f4750>, <matplotlib.lines.Line2D object at 0x1a1f0f4c50>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a1f0ea6d0>], 'medians': [<matplotlib.lines.Line2D object at 0x1a1f0fb750>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a1f0fb690>], 'means': []}
 
 ``` python
+ax[1].boxplot(not_canceled.lead_time, vert=False, flierprops=red_point)
+```
+
+    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a1f0eadd0>, <matplotlib.lines.Line2D object at 0x1a1f1047d0>], 'caps': [<matplotlib.lines.Line2D object at 0x1a1f104cd0>, <matplotlib.lines.Line2D object at 0x1a1f10e210>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a1f0eab50>], 'medians': [<matplotlib.lines.Line2D object at 0x1a1f10ecd0>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a1f10ec10>], 'means': []}
+
+``` python
+ax[0].set_title('Canceled')
+ax[1].set_title('Not Canceled')
+ax[1].set(xlabel='Lead Time')
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` python
 median_lead_canc = np.median(canceled.lead_time)
@@ -305,31 +339,31 @@ time.
 ### Do people who book through online travel agencies have larger median lead times?
 
 ``` python
+# define lead time for ota's and non-ota
 ta_lead_time = hotels[hotels.market_segment == 'Online TA']['lead_time']
-ta_canceled_lead_time = hotels[(hotels.market_segment == 'Online TA') & (hotels.is_canceled == 1)]['lead_time']
 not_ta_lead_time = hotels[hotels.market_segment != 'Online TA']['lead_time']
-# plot hist of lead time for canceled and non-canceled guests
-fig, ax = plt.subplots(3, figsize=(10, 8), sharex=True, sharey=True, gridspec_kw={'hspace': 0.5})
-ta_lead_time.hist(ax=ax[0], bins = 30)
-not_ta_lead_time.hist(ax=ax[1], bins = 30)
-ta_canceled_lead_time.hist(ax=ax[2], bins = 30)
 
-ax[0].set_title('Online TA Lead Time')
-ax[1].set_title('All Other Methods of Booking')
-ax[2].set_title('Canceled lead times from Online TAs')
-for ax in ax.flat:
-    ax.set(xlabel='Lead Time', ylabel='Count')
+# plot hist of lead time for canceled and non-canceled guests
+fig, ax = plt.subplots(2, figsize=(10, 4), sharex=True, sharey=True, gridspec_kw={'hspace': 0})
+ax[0].boxplot(ta_lead_time, vert=False, flierprops=red_point)
 ```
 
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'Lead Time')]
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'Lead Time')]
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'Lead Time')]
+    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a20d20c50>, <matplotlib.lines.Line2D object at 0x1a228355d0>], 'caps': [<matplotlib.lines.Line2D object at 0x1a235bc0d0>, <matplotlib.lines.Line2D object at 0x1a235bc5d0>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a20d20fd0>], 'medians': [<matplotlib.lines.Line2D object at 0x1a1ef62310>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a235c4050>], 'means': []}
 
 ``` python
+ax[1].boxplot(not_ta_lead_time, vert=False, flierprops=red_point)
+```
+
+    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a235c49d0>, <matplotlib.lines.Line2D object at 0x1a235d0050>], 'caps': [<matplotlib.lines.Line2D object at 0x1a235d0510>, <matplotlib.lines.Line2D object at 0x1a235d0a10>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a235b8210>], 'medians': [<matplotlib.lines.Line2D object at 0x1a235d8510>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a235d8450>], 'means': []}
+
+``` python
+ax[0].set_title('OTA Lead Time')
+ax[1].set_title("Lead Time from non-OTA's")
+ax[1].set(xlabel = 'Lead Time')
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ``` python
 median_lead_ota = np.median(hotels.lead_time)
@@ -341,77 +375,87 @@ median_lead_not_ota = np.median(hotels.market_segment != 'Online TA')
 
 Online travel agencies do not have a higher lead time on average, there
 may be another area here to explore. Lead time and bookings from OTA’s
-seem to correlate to higher rates of cancellation.
+seem to correlate to higher rates of
+cancellation.
 
 ### How have distribution channels changed over time?
 
 ``` python
-hotels_2015 = hotels[hotels.arrival_date_year  == 2015]
-hotels_2016 = hotels[hotels.arrival_date_year  == 2016]
-hotels_2017 = hotels[hotels.arrival_date_year  == 2017]
-print(hotels_2015.head())
+hotels_2015 = hotels[(hotels.arrival_date_year  == 2015) & (hotels.market_segment != 'Undefined') & (hotels.market_segment != 'Aviation')]
+hotels_2016 = hotels[(hotels.arrival_date_year  == 2016) & (hotels.market_segment != 'Undefined') & (hotels.market_segment != 'Aviation')]
+hotels_2017 = hotels[(hotels.arrival_date_year  == 2017) & (hotels.market_segment != 'Undefined') & (hotels.market_segment != 'Aviation')]
 ```
-
-    ##           hotel  is_canceled  ...  reservation_status  reservation_status_date
-    ## 0  Resort Hotel            0  ...           Check-Out               2015-07-01
-    ## 1  Resort Hotel            0  ...           Check-Out               2015-07-01
-    ## 2  Resort Hotel            0  ...           Check-Out               2015-07-02
-    ## 3  Resort Hotel            0  ...           Check-Out               2015-07-02
-    ## 4  Resort Hotel            0  ...           Check-Out               2015-07-03
-    ## 
-    ## [5 rows x 32 columns]
 
 ``` python
 # plot hist per week for arrival_date_week_number
-fig, ax = plt.subplots(3, figsize=(8, 10), sharex=True, sharey=True, gridspec_kw={'hspace': 0.5})
-hotels_2015.market_segment.hist(ax=ax[0], bins = 30)
-hotels_2016.market_segment.hist(ax=ax[1], bins = 30)
-hotels_2017.market_segment.hist(ax=ax[2], bins = 30)
+labels = hotels_2015.market_segment.unique()
+x = np.arange(len(labels))  # the label locations
+width = 0.25  # the width of the bars
 
-ax[0].set_title('2015', fontsize = 15, weight = 'bold')
-ax[1].set_title('2016', fontsize = 15, weight = 'bold')
-ax[2].set_title('2017', fontsize = 15, weight = 'bold')
-for ax in ax.flat:
-    ax.set(xlabel='distribtion_channel\n', ylabel='Count')
+ms_2015 = round(hotels_2015.market_segment.value_counts(normalize = True, sort=False), 2)
+ms_2016 = round(hotels_2016.market_segment.value_counts(normalize = True, sort=False), 2)
+ms_2017 = round(hotels_2017.market_segment.value_counts(normalize = True, sort=False), 2)
+
+fig, ax = plt.subplots(figsize=(10, 5))
+year_2015 = ax.bar(x - width, ms_2015, width, label='2015')
+year_2016 = ax.bar(x, ms_2016, width, label='2016')
+year_2017 = ax.bar(x + width, ms_2017, width, label='2017')
+
+# Add some text for labels, title and custom x-axis tick labels, etc.
+ax.set_ylabel('Bookings')
+ax.set_title('Changing Customer Channels (City and Resort)')
+ax.set_xticks(x)
 ```
 
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'distribtion_channel\n')]
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'distribtion_channel\n')]
-    ## [Text(0, 0.5, 'Count'), Text(0.5, 0, 'distribtion_channel\n')]
+    ## [<matplotlib.axis.XTick object at 0x1a214e3ed0>, <matplotlib.axis.XTick object at 0x1a214e3710>, <matplotlib.axis.XTick object at 0x1a214fa250>, <matplotlib.axis.XTick object at 0x1a215064d0>, <matplotlib.axis.XTick object at 0x1a21506a50>, <matplotlib.axis.XTick object at 0x1a2150d190>]
 
 ``` python
+ax.set_xticklabels(labels)
+```
+
+    ## [Text(0, 0, 'Direct'), Text(0, 0, 'Corporate'), Text(0, 0, 'Online TA'), Text(0, 0, 'Offline TA/TO'), Text(0, 0, 'Complementary'), Text(0, 0, 'Groups')]
+
+``` python
+ax.legend()
+
+def autolabel(rects):
+    """Attach a text label above each bar in *rects*, displaying its height."""
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate('{}'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+
+
+autolabel(year_2015)
+autolabel(year_2016)
+autolabel(year_2017)
+
+
+fig.tight_layout()
+
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 ``` python
 # list of data by year
 data = [hotels_2015, hotels_2016, hotels_2017]
 loc = ['City Hotel', 'Resort Hotel']
+pct = []
 for hotel in data:
     ms = hotel.groupby(['hotel', 'market_segment']).agg({'market_segment': 'count'})
     ms_pct = ms.groupby(level=0).apply(lambda x: 100 * x / float(x.sum()))
     for place in loc:
-      print(ms_pct.loc[place].loc['Online TA'])
+      pct.append(round(ms_pct.loc[place].loc['Online TA'].values[0], 1))
 ```
 
-    ## market_segment    22.387078
-    ## Name: Online TA, dtype: float64
-    ## market_segment    37.310561
-    ## Name: Online TA, dtype: float64
-    ## market_segment    51.672784
-    ## Name: Online TA, dtype: float64
-    ## market_segment    42.83406
-    ## Name: Online TA, dtype: float64
-    ## market_segment    58.081285
-    ## Name: Online TA, dtype: float64
-    ## market_segment    50.641172
-    ## Name: Online TA, dtype: float64
-
-Percent booking from OTAs for the city hotel were… - 22.4% in 2015. -
-51.6% in 2016. - 58.1% in 2017. Percent booking from OTAs for the resort
-hotel were… - 37.3% in 2015. - 42.8% in 2016. - 50.6% in 2017.
+Percentage of bookings from OTAs for city hotel: - % in 2015. - 37.3% in
+2016. - 42.8% in 2017. Percentage of bookings from OTAs for resort
+hotel: - 22.4% in 2015. - 51.8% in 2016. - 58.3% in 2017.
 
 In 2015, the city hotel received 22% of it’s bookings through OTAs while
 the resort hotel received 37%. By 2017, city hotel recieved 58% of its
@@ -454,13 +498,7 @@ d = {'guest_type': ['Babies', 'Children', 'No Kids'], \
     'percent': [perc_babies, perc_children, perc_no_kids]}
 
 pie_data = pd.DataFrame(data=d)
-pie_data
 ```
-
-    ##   guest_type percent
-    ## 0     Babies   82.0%
-    ## 1   Children   64.0%
-    ## 2    No Kids   63.0%
 
 ``` python
 import re
@@ -478,9 +516,10 @@ def donut_plot(data, plotnumber):
         
         donut_sizes = [remainingPie, percentage]
         
-        plt.text(0.01, startingRadius - 0.25, textLabel, ha='right', va='bottom', fontsize = 12, fontweight = 'bold')
+        plt.text(0.01, startingRadius - 0.25, textLabel, ha='right', va='bottom', fontsize = 12, 
+        fontweight = 'bold')
         
-        plt.pie(donut_sizes, radius=startingRadius, startangle=90, colors=['lightgray', 'tomato'],
+        plt.pie(donut_sizes, radius=startingRadius, startangle=0, colors=['lightgray', 'tomato'],
                 wedgeprops={"edgecolor": "white", 'linewidth': 1.5})
         
         startingRadius-=0.3
@@ -491,7 +530,6 @@ def donut_plot(data, plotnumber):
     # create circle and place onto pie chart
     circle = plt.Circle(xy=(0, 0), radius=0.35, facecolor='white')
     plt.gca().add_artist(circle)
-    plt.savefig('donutPlot' +plotnumber+ '.jpg')
     plt.show()
 ```
 
@@ -501,7 +539,7 @@ plt.title('82% of guests with babies \n did not cancel \n', fontsize = '18', fon
 donut_plot(pie_data, '1')
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 Guests with babies followed through with their booking 83% of the time
 and 86% of guests who stayed with babies had at least one special
@@ -546,9 +584,9 @@ ggplot(df, aes(x = 'arrival_date_month', y = 'count', fill = 'kids')) + \
     ggtitle("Percent Distribution of Guests with and without Kids")
 ```
 
-    ## <ggplot: (7023981725)>
+    ## <ggplot: (7020659985)>
 
-![](Milestone_files/figure-gfm/unnamed-chunk-24-1.png)<!-- --> Between
+![](Milestone_files/figure-gfm/unnamed-chunk-25-1.png)<!-- --> Between
 both hotels, a majority of guests come without babies or children. Out
 of the year however, it is easy to predict when families will arrive,
 between both hotels families typically arrived in the summer months.
@@ -581,7 +619,7 @@ y="adr", data=kids_per_guest, kind="box", hue = "kids", showfliers = False)
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-26-1.png)<!-- --> - The
+![](Milestone_files/figure-gfm/unnamed-chunk-27-1.png)<!-- --> - The
 average revenue increases on average as family size increases for both
 hotels.
 
@@ -636,6 +674,17 @@ value. Below is an analysis of each of the identified variables with the
 result.
 
 ``` python
+# import appropriate modules
+from scipy.stats import chisquare
+from scipy.stats import chi2
+from scipy.stats import chi2_contingency
+from scipy.stats import norm
+from scipy.stats import t
+from numpy.random import seed
+from scipy import stats
+```
+
+``` python
 # define function to output chi-squared test and results
 def chi2results(var1, var2, prob):
     observed = pd.crosstab(var1, var2)
@@ -664,90 +713,172 @@ print(observed)
     ## [2 rows x 8 columns]
 
 ``` python
-#chi-square statistic - χ2
-from scipy.stats import chisquare
-from scipy.stats import chi2
-from scipy.stats import chi2_contingency
 # set columns to test
-cols = ['market_segment', 'agent', 'distribution_channel', 'is_repeated_guest', \
-        'country', 'arrival_date_month', 'hotel', 'kids']
+cat_cols = list(hotels.describe(exclude=[np.number]).columns)
 test_col = 'is_canceled'
 
 # Creating an empty Dataframe with column names only
 chi_square_results = pd.DataFrame(columns=['chi_square', 'critical_val', 'p_val', \
-                                            'dof', 'alpha', 'result'], index = cols)
-for col in cols:
+                                            'dof', 'alpha', 'result'], index = cat_cols)
+for col in cat_cols:
     res = chi2results(hotels[test_col], hotels[col], prob = 0.95)
     chi_square_results.loc[col] = [res[0], res[1], res[2], res[3], res[4], res[5]]
 
-chi_square_results
+print(chi_square_results[['p_val', 'result']])
 ```
 
-    ##                      chi_square critical_val  ... alpha                 result
-    ## market_segment          8497.22      14.0671  ...  0.05  Dependent (reject H0)
-    ## agent                   17785.2      376.555  ...  0.05  Dependent (reject H0)
-    ## distribution_channel    3745.79      9.48773  ...  0.05  Dependent (reject H0)
-    ## is_repeated_guest       857.406      3.84146  ...  0.05  Dependent (reject H0)
-    ## country                 15565.2      209.042  ...  0.05  Dependent (reject H0)
-    ## arrival_date_month      588.692      19.6751  ...  0.05  Dependent (reject H0)
-    ## hotel                   2224.92      3.84146  ...  0.05  Dependent (reject H0)
-    ## kids                    19.3888      3.84146  ...  0.05  Dependent (reject H0)
-    ## 
-    ## [8 rows x 6 columns]
+    ##                                 p_val                 result
+    ## hotel                               0  Dependent (reject H0)
+    ## meal                      1.32124e-64  Dependent (reject H0)
+    ## country                             0  Dependent (reject H0)
+    ## market_segment                      0  Dependent (reject H0)
+    ## distribution_channel                0  Dependent (reject H0)
+    ## reserved_room_type       1.12196e-133  Dependent (reject H0)
+    ## assigned_room_type                  0  Dependent (reject H0)
+    ## deposit_type                        0  Dependent (reject H0)
+    ## agent                               0  Dependent (reject H0)
+    ## company                  1.73552e-297  Dependent (reject H0)
+    ## customer_type                       0  Dependent (reject H0)
+    ## reservation_status                  0  Dependent (reject H0)
+    ## reservation_status_date             0  Dependent (reject H0)
+    ## kids                      1.06631e-05  Dependent (reject H0)
 
 The null hypothesis is rejected for each of the tested columns,
 suggesting an association with cancellations for each variable.
 
+``` python
+num_cols = list(hotels.describe(include=[np.number]).columns)
+print(num_cols)
+```
+
+    ## ['is_canceled', 'lead_time', 'arrival_date_year', 'arrival_date_month', 'arrival_date_week_number', 'arrival_date_day_of_month', 'stays_in_weekend_nights', 'stays_in_week_nights', 'adults', 'children', 'babies', 'is_repeated_guest', 'previous_cancellations', 'previous_bookings_not_canceled', 'booking_changes', 'days_in_waiting_list', 'adr', 'required_car_parking_spaces', 'total_of_special_requests']
+
+``` python
+mean = np.mean(hotels['adr'])
+std = np.std(hotels['adr'], ddof = 1)
+_ = plt.hist(hotels['adr'], bins = 40, range = (0, 500))
+_ = plt.xlabel('Average Daily Rate (adr)')
+_ = plt.ylabel('frequency')
+_ = plt.axvline(mean, color='r')
+_ = plt.axvline(mean+std, color='r', linestyle='--')
+_ = plt.axvline(mean-std, color='r', linestyle='--')
+_ = plt.show()
+```
+
+![](Milestone_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+
+``` python
+print('mean charges ' + str(round(mean, 2)))
+```
+
+    ## mean charges 101.83
+
+``` python
+print('stadndard deviation ' + str(round(std, 2)))
+```
+
+    ## stadndard deviation 50.54
+
+The null hypothesis for the average daily rate is that is has no
+influence on whether or not a booking is likely to be canceled.
+
+``` python
+# Define samples
+sample0 = hotels[hotels.is_canceled == 1]['adr']
+sample1 = hotels[hotels.is_canceled == 0]['adr']
+n_0 = len(sample0)
+n_1 = len(sample1)
+# Define mean and standard deviation for each group
+x_0 = np.mean(sample0)
+x_1 = np.mean(sample1)
+s_0 = np.std(sample0, ddof = 1)
+s_1 = np.std(sample1, ddof = 1)
+# degrees of freedom
+df = n_0 + n_1 - 2
+```
+
+``` python
+t, pval = stats.ttest_ind_from_stats(x_0, s_0, n_0, x_1, s_1, n_1)
+
+print(t, pval)
+```
+
+    ## 16.45063928773002 9.68293418006015e-61
+
+The results reject the null hypothesis. The confidence interval is far
+greater than the accepted 95% needed to accept this outcome. Thus we can
+conclude that the average daily rate is important in determining if a
+booking will be canceled.
+
+``` python
+def significance(col):
+  ''' this function will return the t-stat and pval of a feature of interest '''
+  # Define samples
+  sample0 = hotels[hotels.is_canceled == 1][col]
+  sample1 = hotels[hotels.is_canceled == 0][col]
+  n_0 = len(sample0)
+  n_1 = len(sample1)
+  # Define mean and standard deviation for each group
+  x_0 = np.mean(sample0)
+  x_1 = np.mean(sample1)
+  s_0 = np.std(sample0, ddof = 1)
+  s_1 = np.std(sample1, ddof = 1)
+  # degrees of freedom
+  df = n_0 + n_1 - 2
+  
+  t, pval = stats.ttest_ind_from_stats(x_0, s_0, n_0, x_1, s_1, n_1)
+  
+  if pval <= 0.05:
+      result = 'Dependent (reject H0)'
+  else:
+      result = 'Ind (fail to reject H0)'
+    
+  return t, pval, result
+```
+
+``` python
+num_cols = list(hotels.describe(include=[np.number]).columns)
+
+# Creating an empty Dataframe with column names only
+t_stat_results = pd.DataFrame(columns=['t_stat', 'p_val', 'result'], index = num_cols)
+
+for col in num_cols:
+  res = significance(col)
+  t_stat_results.loc[col] = [res[0], res[1], res[2]]
+
+print(t_stat_results)
+```
+
+    ##                                   t_stat         p_val                   result
+    ## is_canceled                          inf             0    Dependent (reject H0)
+    ## lead_time                        105.935             0    Dependent (reject H0)
+    ## arrival_date_year                5.75721   8.57249e-09    Dependent (reject H0)
+    ## arrival_date_month               3.80854   0.000139859    Dependent (reject H0)
+    ## arrival_date_week_number         2.81546    0.00487155    Dependent (reject H0)
+    ## arrival_date_day_of_month       -2.11814     0.0341653    Dependent (reject H0)
+    ## stays_in_weekend_nights        -0.618864      0.536007  Ind (fail to reject H0)
+    ## stays_in_week_nights             8.55944   1.14733e-17    Dependent (reject H0)
+    ## adults                           20.7749   1.07857e-95    Dependent (reject H0)
+    ## children                         1.74018     0.0818304  Ind (fail to reject H0)
+    ## babies                          -11.2324   2.92302e-29    Dependent (reject H0)
+    ## is_repeated_guest               -29.4042  2.31271e-189    Dependent (reject H0)
+    ## previous_cancellations           38.2866             0    Dependent (reject H0)
+    ## previous_bookings_not_canceled  -19.8512   1.48947e-87    Dependent (reject H0)
+    ## booking_changes                 -50.4156             0    Dependent (reject H0)
+    ## days_in_waiting_list             18.7501   2.50357e-78    Dependent (reject H0)
+    ## adr                              16.4506   9.68293e-61    Dependent (reject H0)
+    ## required_car_parking_spaces     -68.8786             0    Dependent (reject H0)
+    ## total_of_special_requests       -83.4092             0    Dependent (reject H0)
+
 # Machine Learning
 
 ``` python
-hotels.describe(exclude=[np.number]).T
+cat_features = chi_square_results.index.to_list()
+num_features = t_stat_results[t_stat_results['result'] != 'Ind (fail to reject H0)'].index.to_list()
+features = cat_features + num_features
 ```
 
-    ##                           count unique  ...      first       last
-    ## hotel                    119390      2  ...        NaT        NaT
-    ## meal                     119390      5  ...        NaT        NaT
-    ## country                  119390    178  ...        NaT        NaT
-    ## market_segment           119390      8  ...        NaT        NaT
-    ## distribution_channel     119390      5  ...        NaT        NaT
-    ## reserved_room_type       119390     10  ...        NaT        NaT
-    ## assigned_room_type       119390     12  ...        NaT        NaT
-    ## deposit_type             119390      3  ...        NaT        NaT
-    ## agent                    119390    334  ...        NaT        NaT
-    ## company                  119390    353  ...        NaT        NaT
-    ## customer_type            119390      4  ...        NaT        NaT
-    ## reservation_status       119390      3  ...        NaT        NaT
-    ## reservation_status_date  119390    926  ... 2014-10-17 2017-09-14
-    ## kids                     119390      2  ...        NaT        NaT
-    ## 
-    ## [14 rows x 6 columns]
-
-``` python
-hotels.describe(include=[np.number]).T
-```
-
-    ##                                    count         mean  ...     75%     max
-    ## is_canceled                     119390.0     0.370416  ...     1.0     1.0
-    ## lead_time                       119390.0   104.011416  ...   160.0   737.0
-    ## arrival_date_year               119390.0  2016.156554  ...  2017.0  2017.0
-    ## arrival_date_month              119390.0     6.552483  ...     9.0    12.0
-    ## arrival_date_week_number        119390.0    27.165173  ...    38.0    53.0
-    ## arrival_date_day_of_month       119390.0    15.798241  ...    23.0    31.0
-    ## stays_in_weekend_nights         119390.0     0.927599  ...     2.0    19.0
-    ## stays_in_week_nights            119390.0     2.500302  ...     3.0    50.0
-    ## adults                          119390.0     1.856403  ...     2.0    55.0
-    ## children                        119390.0     0.103886  ...     0.0    10.0
-    ## babies                          119390.0     0.007949  ...     0.0    10.0
-    ## is_repeated_guest               119390.0     0.031912  ...     0.0     1.0
-    ## previous_cancellations          119390.0     0.087118  ...     0.0    26.0
-    ## previous_bookings_not_canceled  119390.0     0.137097  ...     0.0    72.0
-    ## booking_changes                 119390.0     0.221124  ...     0.0    21.0
-    ## days_in_waiting_list            119390.0     2.321149  ...     0.0   391.0
-    ## adr                             119390.0   101.831122  ...   126.0  5400.0
-    ## required_car_parking_spaces     119390.0     0.062518  ...     0.0     8.0
-    ## total_of_special_requests       119390.0     0.571363  ...     1.0     5.0
-    ## 
-    ## [19 rows x 8 columns]
+Split data into features and label
 
 ``` python
 # load appropriate modules
@@ -755,63 +886,43 @@ from numpy import array
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
-features = ['market_segment', 'agent', 'distribution_channel', 'is_repeated_guest', \
-        'country', 'arrival_date_month', 'hotel', 'kids', 'company', 'adr', 'lead_time', 'reserved_room_type', 'total_of_special_requests', 'days_in_waiting_list', 'babies']
-
-X = hotels[features]
+X = hotels[features].drop('is_canceled', axis=1)
         
 # Dummy coding
 y = hotels['is_canceled']
 
 # Dummy coding for col in cols
-cols = ['market_segment', 'distribution_channel', 'hotel', 'kids', 'reserved_room_type']
+dummy_cols = ['market_segment', 'distribution_channel', 'hotel', 'kids', 'reserved_room_type', 'meal', 'assigned_room_type', 'deposit_type', 'customer_type', 'reservation_status']
 transformed = []
-for col in cols:
+for col in dummy_cols:
   X[col] = pd.get_dummies(X[col])
 
-# One Hot Encoder for country column
+# Label Encoder
+enc_cols = ['country', 'agent', 'company', 'reservation_status_date']
+for col in enc_cols:
+  data = hotels[col].to_list()
+  values = array(data)
+  # initialize labelencoder, fit and transform
+  label_encoder = LabelEncoder()
+  integer_encoded = label_encoder.fit_transform(values)
+  transformed.append(integer_encoded)
+  # Drop country column and replace with encoded 
+  X.drop(col, axis = 1, inplace = True)
+  X[col] = integer_encoded
+
+print(X.head())
 ```
 
-    ## /Users/mattmerrill/opt/anaconda3/bin/python3:2: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame.
-    ## Try using .loc[row_indexer,col_indexer] = value instead
+    ##    hotel  meal  market_segment  ...  agent  company  reservation_status_date
+    ## 0      0     1               0  ...      0        0                      121
+    ## 1      0     1               0  ...      0        0                      121
+    ## 2      0     1               0  ...      0        0                      122
+    ## 3      0     1               0  ...    157        0                      122
+    ## 4      0     1               0  ...    103        0                      123
     ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+    ## [5 rows x 30 columns]
 
-``` python
-data = hotels['country'].to_list()
-values = array(data)
-
-# initialize labelencoder, fit and transform
-label_encoder = LabelEncoder()
-integer_encoded = label_encoder.fit_transform(values)
-transformed.append(integer_encoded)
-
-# Drop country column and replace with encoded 
-X.drop('country', axis = 1, inplace = True)
-```
-
-    ## /Users/mattmerrill/opt/anaconda3/lib/python3.7/site-packages/pandas/core/frame.py:4102: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame
-    ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-    ##   errors=errors,
-
-``` python
-X['country'] = integer_encoded
-```
-
-    ## /Users/mattmerrill/opt/anaconda3/bin/python3:1: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame.
-    ## Try using .loc[row_indexer,col_indexer] = value instead
-    ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-
-``` python
-print(X.values.shape)
-```
-
-    ## (119390, 15)
+Perform logistic regression
 
 ``` python
 from sklearn.model_selection import train_test_split
@@ -822,7 +933,7 @@ from sklearn.metrics import accuracy_score
 
 #scaler in pipeline object, use logreg algorith
 steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression())]
+         ('logreg', LogisticRegression(max_iter=200))]
 pipeline = Pipeline(steps)
 
 logreg = LogisticRegression()
@@ -836,7 +947,7 @@ y_pred = pipeline.predict(X_test)
 accuracy_score(y_test, y_pred)
 ```
 
-    ## 0.738894938157858
+    ## 0.9899489069436301
 
 ``` python
 def display_plot(cv_scores, cv_scores_std):
@@ -857,6 +968,8 @@ def display_plot(cv_scores, cv_scores_std):
     ax.set_xscale('log')
     plt.show()
 ```
+
+Perform ridge regression and plot
 
 ``` python
 from sklearn.linear_model import Ridge
@@ -888,14 +1001,14 @@ for alpha in alpha_space:
 display_plot(ridge_scores, ridge_scores_std)
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
 
 ``` python
 # Lasso for feature selection in scikit learn
 #store feature names
 from sklearn.linear_model import Lasso
 names = X.columns
-lasso = Lasso(alpha=0.001)
+lasso = Lasso(alpha=1)
 # extract coef attribute and store
 lasso_coef = lasso.fit(X, y).coef_
 _ = plt.figure(figsize=(20,10))
@@ -905,7 +1018,7 @@ _ = plt.ylabel('Coefficients')
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-43-1.png)<!-- -->
 
 ``` python
 from sklearn.metrics import roc_auc_score
@@ -919,7 +1032,7 @@ fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
 plt.plot(fpr, tpr, label = 'Logistic Regression')
 ```
 
-    ## [<matplotlib.lines.Line2D object at 0x1c30618410>]
+    ## [<matplotlib.lines.Line2D object at 0x1c2c3ad2d0>]
 
 ``` python
 plt.xlabel('True Positive Rate')
@@ -943,7 +1056,7 @@ plt.title('Logistic Regression ROC Curve')
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
 
 ``` python
 # tuning the modal
@@ -962,13 +1075,13 @@ def cv_score(clf, x, y, score_func=accuracy_score):
 ``` python
 #scaler in pipeline object, use logreg algorith
 steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression())]
+         ('logreg', LogisticRegression(max_iter=200))]
 pipeline = Pipeline(steps)
 score = cv_score(pipeline, X_train, y_train)
 print(score)
 ```
 
-    ## 0.7337298767879719
+    ## 0.9898053075779891
 
 ``` python
 #the grid of parameters to search over
@@ -981,7 +1094,7 @@ df = pd.DataFrame(columns=['Cs', 'cv_score'])
 for c in Cs:
     #scaler in pipeline object, use knn algorith
     steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression(C=c))]
+         ('logreg', LogisticRegression(C=c, max_iter=1000))]
     pipeline = Pipeline(steps)
     score = cv_score(pipeline, X_train, y_train)
     df = df.append({'Cs' : c , 'cv_score' : score} , ignore_index=True)
@@ -989,12 +1102,12 @@ print(df[df.cv_score == df.cv_score.max()])
 ```
 
     ##       Cs  cv_score
-    ## 0  0.001   0.73513
+    ## 4  100.0  0.991325
 
 ``` python
 #scaler in pipeline object, use logreg algorith
 steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression(C = 0.001))]
+         ('logreg', LogisticRegression(C = 100, max_iter=1000))]
 pipeline = Pipeline(steps)
 pipeline.fit(X_train, y_train)
 # Print the accuracy from the testing data.
@@ -1004,9 +1117,9 @@ pipeline.fit(X_train, y_train)
     ##          steps=[('scaler',
     ##                  StandardScaler(copy=True, with_mean=True, with_std=True)),
     ##                 ('logreg',
-    ##                  LogisticRegression(C=0.001, class_weight=None, dual=False,
+    ##                  LogisticRegression(C=100, class_weight=None, dual=False,
     ##                                     fit_intercept=True, intercept_scaling=1,
-    ##                                     l1_ratio=None, max_iter=100,
+    ##                                     l1_ratio=None, max_iter=1000,
     ##                                     multi_class='auto', n_jobs=None,
     ##                                     penalty='l2', random_state=None,
     ##                                     solver='lbfgs', tol=0.0001, verbose=0,
@@ -1017,7 +1130,7 @@ pipeline.fit(X_train, y_train)
 print(accuracy_score(pipeline.predict(X_test), y_test))
 ```
 
-    ## 0.7398442080576263
+    ## 0.99148449060502
 
 ``` python
 from sklearn.ensemble import RandomForestClassifier
@@ -1045,7 +1158,7 @@ y_pred = rfc.predict(X_test)
 print(y_pred)
 ```
 
-    ## [1 1 0 ... 0 1 1]
+    ## [0 1 0 ... 0 1 1]
 
 ``` python
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
@@ -1054,8 +1167,8 @@ from sklearn.model_selection import cross_val_score
 print(confusion_matrix(y_test,y_pred))
 ```
 
-    ## [[20682  1893]
-    ##  [ 3089 10153]]
+    ## [[22564    11]
+    ##  [  262 12980]]
 
 ``` python
 print(classification_report(y_test,y_pred))
@@ -1063,18 +1176,18 @@ print(classification_report(y_test,y_pred))
 
     ##               precision    recall  f1-score   support
     ## 
-    ##            0       0.87      0.92      0.89     22575
-    ##            1       0.84      0.77      0.80     13242
+    ##            0       0.99      1.00      0.99     22575
+    ##            1       1.00      0.98      0.99     13242
     ## 
-    ##     accuracy                           0.86     35817
-    ##    macro avg       0.86      0.84      0.85     35817
-    ## weighted avg       0.86      0.86      0.86     35817
+    ##     accuracy                           0.99     35817
+    ##    macro avg       0.99      0.99      0.99     35817
+    ## weighted avg       0.99      0.99      0.99     35817
 
 ``` python
 print(accuracy_score(y_test, y_pred))
 ```
 
-    ## 0.8609040399810146
+    ## 0.9923779210989195
 
 ``` python
 from sklearn.metrics import roc_auc_score
@@ -1088,7 +1201,7 @@ fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
 plt.plot(fpr, tpr, label = 'Random Forest')
 ```
 
-    ## [<matplotlib.lines.Line2D object at 0x1c32b837d0>]
+    ## [<matplotlib.lines.Line2D object at 0x1c2ee17d10>]
 
 ``` python
 plt.xlabel('True Positive Rate')
@@ -1112,7 +1225,7 @@ plt.title('Random Forest ROC Curve')
 plt.show()
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
+![](Milestone_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
 
 ``` python
 from sklearn.model_selection import RandomizedSearchCV
@@ -1197,8 +1310,8 @@ print("=== Confusion Matrix ===")
 print(confusion_matrix(y_test, rfc_predict))
 ```
 
-    ## [[20689  1886]
-    ##  [ 2868 10374]]
+    ## [[22567     8]
+    ##  [  263 12979]]
 
 ``` python
 print('\n')
@@ -1216,12 +1329,12 @@ print(classification_report(y_test, rfc_predict))
 
     ##               precision    recall  f1-score   support
     ## 
-    ##            0       0.88      0.92      0.90     22575
-    ##            1       0.85      0.78      0.81     13242
+    ##            0       0.99      1.00      0.99     22575
+    ##            1       1.00      0.98      0.99     13242
     ## 
-    ##     accuracy                           0.87     35817
-    ##    macro avg       0.86      0.85      0.86     35817
-    ## weighted avg       0.87      0.87      0.87     35817
+    ##     accuracy                           0.99     35817
+    ##    macro avg       0.99      0.99      0.99     35817
+    ## weighted avg       0.99      0.99      0.99     35817
 
 ``` python
 print('\n')
@@ -1237,7 +1350,7 @@ print("=== All AUC Scores ===")
 print(rfc_cv_score)
 ```
 
-    ## [0.68063269 0.64134212 0.5848166  0.5179055  0.70776668]
+    ## [0.98306633 0.96008193 0.96741903 0.97981846 0.9820091 ]
 
 ``` python
 print('\n')
@@ -1253,7 +1366,7 @@ print("=== Mean AUC Score ===")
 print("Mean AUC Score - Random Forest: ", rfc_cv_score.mean())
 ```
 
-    ## Mean AUC Score - Random Forest:  0.6264927179962638
+    ## Mean AUC Score - Random Forest:  0.9744789685003779
 
 ``` python
 tn, fp, fn, tp = confusion_matrix(y_test, rfc_predict).ravel()
@@ -1263,7 +1376,7 @@ accuracy = (tp+tn)/(tp+fp+fn+tn)
 print(recall, specificity, accuracy)
 ```
 
-    ## 0.7834164023561395 0.9164562569213732 0.8672697322500489
+    ## 0.9801389518199668 0.9996456256921373 0.9924337605047883
 
 ``` python
 from sklearn.ensemble import GradientBoostingClassifier
@@ -1291,8 +1404,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  0.05
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.862
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=0.075, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1304,8 +1417,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  0.075
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.863
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=0.1, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1317,8 +1430,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  0.1
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.863
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=0.25, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1330,8 +1443,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  0.25
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.863
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=0.5, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1343,8 +1456,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  0.5
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.861
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=0.75, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1356,8 +1469,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  0.75
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.860
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=1, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1369,8 +1482,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  1
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.861
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=1.25, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1382,8 +1495,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  1.25
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.859
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=1.5, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1395,8 +1508,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  1.5
-    ## Accuracy score (training): 0.993
-    ## Accuracy score (validation): 0.858
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=1.75, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1408,8 +1521,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  1.75
-    ## Accuracy score (training): 0.992
-    ## Accuracy score (validation): 0.856
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.992
     ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
     ##                            learning_rate=2, loss='deviance', max_depth=260,
     ##                            max_features='sqrt', max_leaf_nodes=None,
@@ -1421,8 +1534,8 @@ for learning_rate in lr_list:
     ##                            validation_fraction=0.1, verbose=0,
     ##                            warm_start=False)
     ## Learning rate:  2
-    ## Accuracy score (training): 0.989
-    ## Accuracy score (validation): 0.846
+    ## Accuracy score (training): 1.000
+    ## Accuracy score (validation): 0.991
 
 ``` python
 gb_clf2 = GradientBoostingClassifier(n_estimators=160, learning_rate=0.1, max_features='sqrt', max_depth=260, random_state=4)
@@ -1452,8 +1565,8 @@ print("Confusion Matrix:")
 print(confusion_matrix(y_test, predictions))
 ```
 
-    ## [[20544  2031]
-    ##  [ 2879 10363]]
+    ## [[22560    15]
+    ##  [  260 12982]]
 
 ``` python
 print("Classification Report")
@@ -1467,12 +1580,12 @@ print(classification_report(y_test, predictions))
 
     ##               precision    recall  f1-score   support
     ## 
-    ##            0       0.88      0.91      0.89     22575
-    ##            1       0.84      0.78      0.81     13242
+    ##            0       0.99      1.00      0.99     22575
+    ##            1       1.00      0.98      0.99     13242
     ## 
-    ##     accuracy                           0.86     35817
-    ##    macro avg       0.86      0.85      0.85     35817
-    ## weighted avg       0.86      0.86      0.86     35817
+    ##     accuracy                           0.99     35817
+    ##    macro avg       0.99      0.99      0.99     35817
+    ## weighted avg       0.99      0.99      0.99     35817
 
 ``` python
 tn, fp, fn, tp = confusion_matrix(y_test, predictions).ravel()
@@ -1482,7 +1595,7 @@ accuracy = (tp+tn)/(tp+fp+fn+tn)
 print(recall, specificity, accuracy)
 ```
 
-    ## 0.7825857121280774 0.9100332225913621 0.8629142585922885
+    ## 0.9803655037003474 0.9993355481727575 0.9923220816930508
 
 1.  Hertzfeld, Esther. Study: Cancellation Rate at 40% as OTAs Push Free
     Change Policy. Hotel Management, 23 Apr. 2019,
