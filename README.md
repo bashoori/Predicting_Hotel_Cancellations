@@ -14,20 +14,20 @@ The dataset was obtained from [Science Direct](https://www.sciencedirect.com) an
 
 The project comprises all steps of Data Science work broken down as follows:
 
-* Data collection and wangling: done with Python (jupyter notebook)
+* Data collection and wangling: done in Jupyter Notebook
 * Exploratory Data Analysis: using python in Rstudio with the reticulate library for statistical data analysis
-* Machine learning: using Python - Logistic Regression and Random Forests with scikit-learn and a final CatBoost algorithm in Rstudio
-* Report completed and rendered as Rmarkdown
+* Machine learning: using Python - Logistic Regression and Random Forests with scikit-learn and a final CatBoost algorithm in Jupyter Notebook
+* Report completed and rendered as Rmarkdown document
 
 ## Links
 
 The work has been broken down in stages and summary slides have been created for a quick look at the results.
 
-* [Data Wrangling and Cleaning](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Data_Wrangling_and_Cleaning_Steps.ipynb)
-* [Exploratory analysis](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Exploratory_data_analysis.ipynb)
-* [Statistical Analysis](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Statistical_Analysis.ipynb)
-* [Machine Learning](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Machine%20Learning.ipynb)
-* [Final Report](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Milestone.md)
+* [Data Wrangling and Cleaning](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Data_Wrangling_and_Cleaning_Steps.ipynb) - Cleaning steps with justification
+* [Exploratory analysis](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Exploratory_data_analysis.ipynb) - Found trends and initial insights into cancellations
+* [Statistical Analysis](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Statistical_Analysis.ipynb) - Identified statistically significant features
+* [Machine Learning](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Machine%20Learning.ipynb) - The Catboost plots render nicely here
+* [Final Report](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Milestone.md) - Very little code, reports findings of each stage
 * [Summary Slides](https://www.slideshare.net/MatthewMerrill14/predicting-hotel-booking-cancellations-238388419) Link to ppt
 
 ## Author
