@@ -9,11 +9,26 @@ According to a study conducted by D-Edge Hospitality Solutions, cancellation rat
 The dataset was obtained from [Science Direct](https://www.sciencedirect.com) and contains a collection of observations taken from 2015 to 2017 of guest bookings for two hotels, both located in Portugal. The data was collected directly from the hotels’ PMS (property management system) database and was relatively clean and structured upon retrieval. Each observation represents a booking, with the variables capturing details including when it was booked, dates of stay, through which operator the guest chose to go through, if that booking was cancelled and the average daily rate.
 
 -------------------
-Currently in progress!
 
 ## Overview
 
+The project comprises all steps of Data Science work broken down as follows:
+
+* Data collection and wangling: done with Python (jupyter notebook)
+* Exploratory Data Analysis: using python in Rstudio with the reticulate library for statistical data analysis
+* Machine learning: using Python - Logistic Regression and Random Forests with scikit-learn and a final CatBoost algorithm in Rstudio
+* Report completed and rendered as Rmarkdown
+
 ## Links
+
+The work has been broken down in stages and summary slides have been created for a quick look at the results.
+
+* [Data Wrangling and Cleaning](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Data_Wrangling_and_Cleaning_Steps.ipynb)
+* [Exploratory analysis](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Exploratory_data_analysis.ipynb)
+* [Statistical Analysis](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Statistical_Analysis.ipynb)
+* [Machine Learning](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Jupyter_Notebooks/Machine%20Learning.ipynb)
+* [Final Report](https://github.com/merrillm1/Predicting_Hotel_Cancellations/blob/master/Milestone.md)
+* [Summary Slides](https://www.slideshare.net/MatthewMerrill14/predicting-hotel-booking-cancellations-238388419) Link to ppt
 
 ## Author
 
