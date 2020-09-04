@@ -46,10 +46,10 @@ through, if that booking was cancelled and the average daily rate. Once
 this project is complete, I will be able to provide insights on the
 following questions:
 
-> Can we predict when and if a guest may cancel a reservation? What
-> inferences can we make that would help optimize customer channels and
-> lower the overall risk? What customers should we be targeting to book
-> directly through the hotel?
+> Can we predict if a guest will cancel a reservation at the moment of
+> booking? What inferences can we draw from cancellation patterns that
+> would help optimize customer channels and lower the overall risk for a
+> hotel?
 
 I will attempt to solve this problem by investigating where
 cancellations primarily occur and during what time of the year. After
@@ -84,11 +84,10 @@ this, the original company and agent names were replaced with string
 numerics to protect anonymity so to continue with this convention, nan
 entries were replaced with “0” to represent “no agent” or “no company”.
 The country column had no added clarification for the nan entries, so it
-was decided that “UNK” for unknown would be used instead.
-
-The last step for cleaning was to create a datetime column for a guest’s
-date of arrival. The data provided the day, month and year separately
-for arrival, so these were combined and converted to datetime format to
+was decided that “UNK” for unknown would be used instead. The last step
+for cleaning was to create a datetime column for a guest’s date of
+arrival. The data provided the day, month and year separately for
+arrival, so these were combined and converted to datetime format to
 allow more versatility in analysis.
 
 Lastly, the data was explored to identify any outliers that may skew
@@ -100,37 +99,23 @@ taken to alter these data.
 
 The code below highlights the data wrangling part. I have carried out
 the analysis in the RStudio IDE which also allows me to use Python code
-using the `reticulate` package.
+using the `reticulate`
+package.
 
 ``` r
-library(tidyverse)
-library(reticulate)
+knitr::opts_chunk$set(fig.width=10, fig.height=5, warning=FALSE, message=FALSE, results=FALSE)
+knitr::opts_chunk$set(global.par = TRUE)
+options(knitr.table.format = "html")
 ```
 
 ### Read in the data
 
 ``` python
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
-import seaborn as sns
-import os
-
-# load data
+# load data from tidy tuesday
 hotels = pd.read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-11/hotels.csv')
 
 print(hotels.head())
 ```
-
-    ##           hotel  is_canceled  ...  reservation_status  reservation_status_date
-    ## 0  Resort Hotel            0  ...           Check-Out               2015-07-01
-    ## 1  Resort Hotel            0  ...           Check-Out               2015-07-01
-    ## 2  Resort Hotel            0  ...           Check-Out               2015-07-02
-    ## 3  Resort Hotel            0  ...           Check-Out               2015-07-02
-    ## 4  Resort Hotel            0  ...           Check-Out               2015-07-03
-    ## 
-    ## [5 rows x 32 columns]
 
 ### Cleaning steps
 
@@ -173,6 +158,31 @@ hotels = hotels[hotels.market_segment != 'Undefined']
 ```
 
 ``` python
+# drop babies outlier
+hotels.drop(hotels[hotels.babies >=5].index, inplace=True)
+```
+
+``` python
+# replace any negative values for adr with zero using clip
+hotels['adr'] = hotels.adr.clip(lower=0)
+```
+
+``` python
+# Generalize children and babies to "kids"
+hotels['kids'] = hotels.children + hotels.babies
+
+hotels = (hotels.assign(kids = lambda df: df.kids.map(
+                    lambda kids: 'has_kids' if kids > 0 else 'no_kids')))
+```
+
+``` python
+# Drop 'Undefined' and 'GDS' to avoid overfitting on not well represented categories
+drop_index = hotels[(hotels.distribution_channel == 'Undefined') | (hotels.distribution_channel=='GDS')].index
+
+hotels.drop(drop_index, inplace=True)
+```
+
+``` python
 hotels.name = 'Hotels'
 null_data = hotels[hotels.isnull().any(axis=1)]
 if null_data.empty:
@@ -181,65 +191,29 @@ else:
     print(hotels.name + ' does contain null values')
 ```
 
-    ## Hotels contains no null values
-
 ## Exploratory Data Analysis:
 
-Before beginning data analysis, it was hypothesised that over time,
-customer bookings from online travel agencies increase along with the
-portion of cancellations from these bookings. I followed up with asking
-a number of questions to gain insight into other variables and factors
-that may contribute to feature selection.
+Exploratory analysis is an opportunity to find unexpected trends in the
+data and draw insights into potential cancellation indicators that can
+assist in creating our model. The most pressing question will be how
+bookings through online travel agencies have changed and how
+cancellations have changed along with it. Along with this, we will also
+investigate how direct bookings have changed relative to OTA’s. This
+will give an opportunity to confirm whether trends occurring globally
+are also affecting our clients market. The research conducted revealed
+increases in OTA bookings in parallel with an increase in cancellations
+and a decrease in direct bookings. If this trend is confirmed it will
+serve as a starting point for our machine learning model. Along with
+OTA’s, there are a number of areas to explore, such as lead time and
+average daily rate. This will be done by comparing plots of
+distributions over time and distributions relative to cancellation rates
+per category. Our visualizations will be created primarily using
+matplotlib and it’s library of options for customizing plots. A summary
+will be provided at the end of this report.
 
-``` python
-# Inspect categorical columns
-hotels.describe(exclude=[np.number]).T
-```
+### Categorical Columns
 
-    ##                           count unique  ...      first       last
-    ## hotel                    119388      2  ...        NaT        NaT
-    ## arrival_date_month       119388     12  ...        NaT        NaT
-    ## meal                     119388      5  ...        NaT        NaT
-    ## country                  119388    178  ...        NaT        NaT
-    ## market_segment           119388      7  ...        NaT        NaT
-    ## distribution_channel     119388      5  ...        NaT        NaT
-    ## reserved_room_type       119388     10  ...        NaT        NaT
-    ## assigned_room_type       119388     12  ...        NaT        NaT
-    ## deposit_type             119388      3  ...        NaT        NaT
-    ## agent                    119388    334  ...        NaT        NaT
-    ## company                  119388    353  ...        NaT        NaT
-    ## customer_type            119388      4  ...        NaT        NaT
-    ## reservation_status       119388      3  ...        NaT        NaT
-    ## reservation_status_date  119388    926  ... 2014-10-17 2017-09-14
-    ## 
-    ## [14 rows x 6 columns]
-
-``` python
-# Inspect numerical columns
-hotels.describe(include=[np.number]).T
-```
-
-    ##                                    count         mean  ...     75%     max
-    ## is_canceled                     119388.0     0.370406  ...     1.0     1.0
-    ## lead_time                       119388.0   104.013134  ...   160.0   737.0
-    ## arrival_date_year               119388.0  2016.156574  ...  2017.0  2017.0
-    ## arrival_date_week_number        119388.0    27.165092  ...    38.0    53.0
-    ## arrival_date_day_of_month       119388.0    15.798439  ...    23.0    31.0
-    ## stays_in_weekend_nights         119388.0     0.927606  ...     2.0    19.0
-    ## stays_in_week_nights            119388.0     2.500327  ...     3.0    50.0
-    ## adults                          119388.0     1.856393  ...     2.0    55.0
-    ## children                        119388.0     0.103888  ...     0.0    10.0
-    ## babies                          119388.0     0.007949  ...     0.0    10.0
-    ## is_repeated_guest               119388.0     0.031913  ...     0.0     1.0
-    ## previous_cancellations          119388.0     0.087119  ...     0.0    26.0
-    ## previous_bookings_not_canceled  119388.0     0.137099  ...     0.0    72.0
-    ## booking_changes                 119388.0     0.221128  ...     0.0    21.0
-    ## days_in_waiting_list            119388.0     2.321188  ...     0.0   391.0
-    ## adr                             119388.0   101.832576  ...   126.0  5400.0
-    ## required_car_parking_spaces     119388.0     0.062519  ...     0.0     8.0
-    ## total_of_special_requests       119388.0     0.571347  ...     1.0     5.0
-    ## 
-    ## [18 rows x 8 columns]
+### Numerical Columns
 
 #### Initial findings of numeric columns:
 
@@ -260,64 +234,18 @@ hotels.describe(include=[np.number]).T
   - Most people do not go through a
 company.
 
+### How are bookings and cancellations distributed among different types of customers?
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-22-1.png" width="960" />
+
+> It looks like most bookings are from transient guests, with 75% of
+> bookings coming from this area. They account for a larger percent of
+> the cancelation percentage however, making up over
+80%.
+
 ### What is the most common means of booking? Through which booking channel do most cancellations occur?
 
-``` python
-# Canceled bookings by market segment
-canceled_pct = round(100*hotels[hotels.is_canceled == 1].market_segment\
-                                                        .value_counts(normalize = True, sort = False)\
-                                                        .sort_index(), 1)
-# Percent of bookings from each market segment
-market_segment_pct = round(100*hotels.market_segment\
-                                     .value_counts(normalize = True, sort = False)\
-                                     .sort_index(), 1)
-
-# set axis labels for market_segment options
-labels = list(canceled_pct.index)
-x = np.arange(len(labels))
-width = 0.35
-
-fig, ax = plt.subplots(figsize=(10, 6)) 
-market_segment_canceled = ax.bar(x + width/2, canceled_pct, width, label = 'Cancelation Distribution')
-market_segment_not_canceled = ax.bar(x - width/2, market_segment_pct, width, label = 'Market Distribution')
-
-# Add some text for labels, title and custom x-axis tick labels, etc.
-ax.set_ylabel('Percent of canceled/not canceled bookings')
-ax.set_title('Customer Channels')
-ax.set_xticks(x)
-```
-
-    ## [<matplotlib.axis.XTick object at 0x1a24c4db10>, <matplotlib.axis.XTick object at 0x1a24c4d190>, <matplotlib.axis.XTick object at 0x1a24e70a90>, <matplotlib.axis.XTick object at 0x1a24ccbe90>, <matplotlib.axis.XTick object at 0x1a24cd6510>, <matplotlib.axis.XTick object at 0x1a24cd6a90>, <matplotlib.axis.XTick object at 0x1a24ce0190>]
-
-``` python
-ax.set_xticklabels(labels)
-```
-
-    ## [Text(0, 0, 'Aviation'), Text(0, 0, 'Complementary'), Text(0, 0, 'Corporate'), Text(0, 0, 'Direct'), Text(0, 0, 'Groups'), Text(0, 0, 'Offline TA/TO'), Text(0, 0, 'Online TA')]
-
-``` python
-ax.legend(fontsize = 14)
-
-def autolabel(rects):
-    """Attach a text label above each bar in *rects*, displaying its height."""
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate('{}'.format(height),
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha='center', va='bottom')
-
-
-autolabel(market_segment_canceled)
-autolabel(market_segment_not_canceled)
-
-fig.tight_layout()
-
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+<img src="Milestone_files/figure-gfm/unnamed-chunk-24-1.png" width="960" />
 
 > The most common means of booking is through an online TA, with over
 > 47% of customers going through this channel. Online TA’s do account
@@ -333,69 +261,7 @@ canceled.
 
 ### How have customer channels changed over time?
 
-``` python
-# Isolate data by year, eliminating Aviation for continuity between years (Aviation wasn't offered until 2016)
-hotels_2015 = hotels[(hotels.arrival_date_year  == 2015) & (hotels.market_segment != 'Aviation')]
-hotels_2016 = hotels[(hotels.arrival_date_year  == 2016) & (hotels.market_segment != 'Aviation')]
-hotels_2017 = hotels[(hotels.arrival_date_year  == 2017) & (hotels.market_segment != 'Aviation')]
-```
-
-``` python
-
-# Market segment breakdown by year
-ms_2015 = round(100*hotels_2015.market_segment.value_counts(normalize = True, sort=False).sort_index(), 1)
-ms_2016 = round(100*hotels_2016.market_segment.value_counts(normalize = True, sort=False).sort_index(), 1)
-ms_2017 = round(100*hotels_2017.market_segment.value_counts(normalize = True, sort=False).sort_index(), 1)
-
-# plot hist per week for arrival_date_week_number
-labels = list(ms_2015.index)
-x = np.arange(len(labels))  # the label locations
-width = 0.25  # the width of the bars
-
-fig, ax = plt.subplots(figsize=(10, 5))
-year_2015 = ax.bar(x - width, ms_2015, width, label='2015')
-year_2016 = ax.bar(x, ms_2016, width, label='2016')
-year_2017 = ax.bar(x + width, ms_2017, width, label='2017')
-
-# Add some text for labels, title and custom x-axis tick labels, etc.
-ax.set_ylabel('Bookings')
-ax.set_title('Customer Channel Distribution over time')
-ax.set_xticks(x)
-```
-
-    ## [<matplotlib.axis.XTick object at 0x1a24e86ed0>, <matplotlib.axis.XTick object at 0x1a24d225d0>, <matplotlib.axis.XTick object at 0x1a24ebb810>, <matplotlib.axis.XTick object at 0x1a27517b90>, <matplotlib.axis.XTick object at 0x1a27517e10>, <matplotlib.axis.XTick object at 0x1a2751f610>]
-
-``` python
-ax.set_xticklabels(labels)
-```
-
-    ## [Text(0, 0, 'Complementary'), Text(0, 0, 'Corporate'), Text(0, 0, 'Direct'), Text(0, 0, 'Groups'), Text(0, 0, 'Offline TA/TO'), Text(0, 0, 'Online TA')]
-
-``` python
-ax.legend()
-
-def autolabel(rects):
-    """Attach a text label above each bar in *rects*, displaying its height."""
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate('{}'.format(height),
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha='center', va='bottom')
-
-
-autolabel(year_2015)
-autolabel(year_2016)
-autolabel(year_2017)
-
-
-fig.tight_layout()
-
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+<img src="Milestone_files/figure-gfm/unnamed-chunk-26-1.png" width="960" />
 
 > In the 2015 group, offline and online TA’s made up a majority of
 > bookings, with a little over a quarter of bookings distributed to each
@@ -408,76 +274,7 @@ plt.show()
 
 ### How has the rate of cancellations changed over time?
 
-``` python
-# Cancellations by year based on market segment
-canceled = hotels[(hotels.market_segment != 'Aviation')
-                          & (hotels.is_canceled == 1)]
-canceled_2015 = round(100*canceled[(canceled.arrival_date_year  == 2015)]\
-                                .market_segment\
-                                .value_counts(normalize = True, sort=False)\
-                                .sort_index(), 1)
-
-canceled_2016 = round(100*canceled[(canceled.arrival_date_year  == 2016)]\
-                                .market_segment\
-                                .value_counts(normalize = True, sort=False)\
-                                .sort_index(), 1)
-
-canceled_2017 = round(100*canceled[(canceled.arrival_date_year  == 2017)]\
-                                .market_segment\
-                                .value_counts(normalize = True, sort=False)\
-                                .sort_index(), 1)
-```
-
-``` python
-# plot hist per week for arrival_date_week_number
-labels = list(canceled_2015.index)
-x = np.arange(len(labels))  # the label locations
-width = 0.25  # the width of the bars
-
-fig, ax = plt.subplots(figsize=(10, 5))
-year_2015 = ax.bar(x - width, canceled_2015, width, label='2015')
-year_2016 = ax.bar(x, canceled_2016, width, label='2016')
-year_2017 = ax.bar(x + width, canceled_2017, width, label='2017')
-
-# Add some text for labels, title and custom x-axis tick labels, etc.
-ax.set_ylabel('Bookings')
-ax.set_title('Cancelation Distribution over time')
-ax.set_xticks(x)
-```
-
-    ## [<matplotlib.axis.XTick object at 0x1a276a36d0>, <matplotlib.axis.XTick object at 0x1a27699d90>, <matplotlib.axis.XTick object at 0x1a27699c50>, <matplotlib.axis.XTick object at 0x1a276f7bd0>, <matplotlib.axis.XTick object at 0x1a291a1050>, <matplotlib.axis.XTick object at 0x1a291a1750>]
-
-``` python
-ax.set_xticklabels(labels)
-```
-
-    ## [Text(0, 0, 'Complementary'), Text(0, 0, 'Corporate'), Text(0, 0, 'Direct'), Text(0, 0, 'Groups'), Text(0, 0, 'Offline TA/TO'), Text(0, 0, 'Online TA')]
-
-``` python
-ax.legend(fontsize=14)
-
-def autolabel(rects):
-    """Attach a text label above each bar in *rects*, displaying its height."""
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate('{}'.format(height),
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha='center', va='bottom')
-
-
-autolabel(year_2015)
-autolabel(year_2016)
-autolabel(year_2017)
-
-
-fig.tight_layout()
-
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+<img src="Milestone_files/figure-gfm/unnamed-chunk-28-1.png" width="960" />
 
 > Groups were the major contributors to cancellations in 2015, with 47%
 > of cancellations originating from this channel. However there was a
@@ -510,72 +307,24 @@ Bookings from online travel agencies increased from 28% to 56% from 2015
 to 2017. During that time, cancellations increased from 37% to 39%, with
 cancellations from OTA’s increasing from 27% to 41%.
 
-``` python
-# list of data by year
-data = [hotels_2015, hotels_2016, hotels_2017]
-loc = ['City Hotel', 'Resort Hotel']
-pct = []
-
-# bookings by hotel for each year
-for hotel in data:
-    ms = hotel.groupby(['hotel', 'market_segment']).agg({'market_segment': 'count'})
-    ms_pct = ms.groupby(level=0).apply(lambda x: 100 * x / float(x.sum()))
-    for place in loc:
-      pct.append(round(ms_pct.loc[place].loc['Online TA'].values[0], 1))
-```
-
 Percentage of bookings from OTAs for city hotel: - % in 2015. - 37.3% in
 2016. - 42.8% in 2017. Percentage of bookings from OTAs for resort
-hotel: - 22.4% in 2015. - 51.8% in 2016. - 58.3% in 2017.
+hotel: - 22.4% in 2015. - 51.8% in 2016. - 58.2% in 2017.
 
 In 2015, the city hotel received 22% of it’s bookings through OTAs while
 the resort hotel received 37%. By 2017, city hotel recieved 58% of its
 bookings through an online TA with the resort hotel increasing their
 portion to 51%. It is clear that both increased significantly over time
 with the city hotel taking a major leap from 2015 to 2016, increasing
-from 22% to 52%.
+from 22% to
+52%.
 
 ### Does lead time correlate to cancellations?
 
-``` python
-# canceled and not canceled bookings
-canceled = hotels[hotels.is_canceled == True]
-not_canceled = hotels[hotels.is_canceled == False]
-
-# outlier labels
-red_point = dict(markerfacecolor='r', marker='p')
-
-# boxplot of lead time for canceled and not canceled bookings
-fig, ax = plt.subplots(2, figsize=(10, 4), sharex=True, sharey=True, gridspec_kw={'hspace': 0})
-ax[0].boxplot(canceled.lead_time, vert=False, flierprops=red_point)
-```
-
-    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a290a9710>, <matplotlib.lines.Line2D object at 0x1a290b5b50>], 'caps': [<matplotlib.lines.Line2D object at 0x1a291b1c50>, <matplotlib.lines.Line2D object at 0x1a290be590>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a290a96d0>], 'medians': [<matplotlib.lines.Line2D object at 0x1a290bead0>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a290befd0>], 'means': []}
-
-``` python
-ax[1].boxplot(not_canceled.lead_time, vert=False, flierprops=red_point)
-```
-
-    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a290a9b90>, <matplotlib.lines.Line2D object at 0x1a290a97d0>], 'caps': [<matplotlib.lines.Line2D object at 0x1a290d05d0>, <matplotlib.lines.Line2D object at 0x1a290d0ad0>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a290a9f90>], 'medians': [<matplotlib.lines.Line2D object at 0x1a290c45d0>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a29146550>], 'means': []}
-
-``` python
-ax[0].set_title('Canceled')
-ax[1].set_title('Not Canceled')
-ax[1].set(xlabel='Lead Time')
-fig.tight_layout()
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
-
-``` python
-# median lead time for canceled and not canceled bookings
-median_lead_canc = np.median(canceled.lead_time)
-median_lead_not_canc = np.median(not_canceled.lead_time)
-```
+<img src="Milestone_files/figure-gfm/unnamed-chunk-30-1.png" width="960" />
 
   - The median lead time for canceled bookings is 113
-  - The median lead time for not canceled bookings is 45
+  - The median lead time for not canceled bookings is 46
 
 The average lead time for canceled bookings is 2.5 times greater on
 average than for those who did not cancel. It may be that people booking
@@ -585,38 +334,7 @@ time.
 
 ### Do people who book through online travel agencies have larger median lead times?
 
-``` python
-# define lead time for ota's and non-ota
-ta_lead_time = hotels[hotels.market_segment == 'Online TA']['lead_time']
-not_ta_lead_time = hotels[hotels.market_segment != 'Online TA']['lead_time']
-
-# plot boxplot of lead time for canceled and non-canceled guests
-fig, ax = plt.subplots(2, figsize=(10, 4), sharex=True, sharey=True, gridspec_kw={'hspace': 0})
-ax[0].boxplot(ta_lead_time, vert=False, flierprops=red_point)
-```
-
-    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a29170e10>, <matplotlib.lines.Line2D object at 0x1a277ca910>], 'caps': [<matplotlib.lines.Line2D object at 0x1a277cae10>, <matplotlib.lines.Line2D object at 0x1a27545c50>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a277c4550>], 'medians': [<matplotlib.lines.Line2D object at 0x1a277d2890>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a277d2d90>], 'means': []}
-
-``` python
-ax[1].boxplot(not_ta_lead_time, vert=False, flierprops=red_point)
-```
-
-    ## {'whiskers': [<matplotlib.lines.Line2D object at 0x1a277c4c50>, <matplotlib.lines.Line2D object at 0x1a277dad90>], 'caps': [<matplotlib.lines.Line2D object at 0x1a277d2e10>, <matplotlib.lines.Line2D object at 0x1a2966a7d0>], 'boxes': [<matplotlib.lines.Line2D object at 0x1a277c4f90>], 'medians': [<matplotlib.lines.Line2D object at 0x1a2966ad10>], 'fliers': [<matplotlib.lines.Line2D object at 0x1a277dae10>], 'means': []}
-
-``` python
-ax[0].set_title('OTA Lead Time')
-ax[1].set_title("Non-OTA Lead Time")
-ax[1].set(xlabel = 'Lead Time')
-fig.tight_layout()
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
-
-``` python
-median_lead_ota = np.median(hotels.lead_time)
-median_lead_not_ota = np.median(hotels.market_segment != 'Online TA')
-```
+<img src="Milestone_files/figure-gfm/unnamed-chunk-32-1.png" width="960" />
 
   - The median lead time for OTA bookings was 113
   - The median lead time for all other methods of booking was 113
@@ -628,235 +346,77 @@ cancellation.
 
 ### What trends are there in the distribution of company and travel agent bookings?
 
-``` python
-fig, ax = plt.subplots(figsize=(12, 6))
-# top 6 companies
-top_n = hotels.company.value_counts().index[:6]
-# assign any company falling outside of the top 6 to "other"
-(hotels.assign(company=hotels.company.where(hotels.company.isin(top_n), "Other" ))
-.company.value_counts().plot.bar(ax=ax))
-ax.set_xlabel('Companies')
-ax.set_ylabel('Count')
-```
+<img src="Milestone_files/figure-gfm/unnamed-chunk-34-1.png" width="1152" />
+\> There are over 300 different companies but a vast majority of
+visitors do not go through them for booking. The ‘0’ company represents
+guests who did not go through a
+company.
 
-![](Milestone_files/figure-gfm/unnamed-chunk-22-1.png)<!-- --> \> There
-are over 300 different companies but a vast majority of visitors do not
-go through them for booking. The ‘0’ company represents guests who did
-not go through a company.
-
-``` python
-fig, ax = plt.subplots(figsize=(10, 6))
-# top 20 agents
-top_n = hotels.agent.value_counts().index[:20]
-# assign agents outside of top 20 to 'other'
-(hotels.assign(agent=hotels.agent.where(hotels.agent.isin(top_n), "Other" ))
-.agent.value_counts().plot.bar(ax=ax))
-ax.set_xlabel('Agents')
-ax.set_ylabel('Count')
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+<img src="Milestone_files/figure-gfm/unnamed-chunk-35-1.png" width="960" />
 
 > The story seems to be different for travel agents, a majority use this
-> channel with most going through agent ‘9.0’.
+> channel with most going through agent
+‘9.0’.
 
 ### How are cancellations distributed throughout the year?
 
-``` python
-# mask for accessing data in plot function
-mask = hotels.hotel.isin(['City Hotel', 'Resort Hotel'])
-g = sns.catplot(x="hotel",\
-                y="arrival_date_week_number", 
-                data=hotels[mask], 
-                kind="box", 
-                hue = "is_canceled")
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
-
-> Resort Hotel shows a higher concentration of cancelations during the
-> summer months, while the City Hotel shows a closely matching
-> correlation between bookings and canceled bookings, both uniformly
-> distributed throughout the
-year.
-
-### Are guests with kids more likely to cancel?
+<img src="Milestone_files/figure-gfm/unnamed-chunk-39-1.png" width="1440" />
 
 ``` python
-# Calculate number of guests with babies who canceled and who did not cancel
-babies = hotels.loc[(hotels.babies != 0)]['babies'].count()
-not_canceled_babies = hotels.loc[(hotels.is_canceled == 0) & (hotels.babies != 0)]['babies'].count()
-
-# Do the same calculation for families with children and with no children
-children = hotels.loc[(hotels.children != 0)]['children'].count()
-not_canceled_children = hotels.loc[(hotels.is_canceled == 0) & (hotels.children != 0)]['children'].count()
-
-# No children
-conditions = (hotels.children == 0) & (hotels.babies == 0)
-no_kids = hotels.loc[conditions]['adults'].count()
-not_canceled_no_kids = hotels.loc[(hotels.is_canceled == 0) & (conditions)]['adults'].count()
+dStart = hotels.projected_arrival.min() # start of data
+dEnd = hotels.projected_arrival.max() # end of data
+timeseries_frequency_plot(
+                         'Resort Hotel', 
+                          hotels[hotels.hotel=='Resort Hotel'], 
+                         'reservation_status_date', 
+                         'is_canceled', 
+                         dStart,
+                         dEnd, 
+                         'W', 
+                         'M', 
+                         yearly_mark
+)
 ```
 
-``` python
-# percentage of families who did not cancel
-perc_babies = str(round(not_canceled_babies/babies, 2)*100) + '%'
-perc_children = str(round(not_canceled_children/children, 2)*100) + '%'
-perc_no_kids = str(round(not_canceled_no_kids/no_kids, 2)*100) + '%'
-```
+<img src="Milestone_files/figure-gfm/unnamed-chunk-40-1.png" width="1440" />
 
-``` python
-# set data frame with results if kids breakdown
-
-d1 = {'guest_type': ['babies', 'children', 'without_children'], \
-     'not_cancled': [not_canceled_babies, not_canceled_children, not_canceled_no_kids],\
-    'percent': [perc_babies, perc_children, perc_no_kids]}
-
-d = {'guest_type': ['Babies', 'Children', 'No Kids'], \
-    'percent': [perc_babies, perc_children, perc_no_kids]}
-
-pie_data = pd.DataFrame(data=d)
-```
-
-``` python
-import re
-
-def donut_plot(data, plotnumber):
-    ''' Create donut plot with data and plot number for multiple plots'''
-    startingRadius = 0.7 + (0.3* (len(data)-1))
-    for index, row in data.iterrows():
-        scenario = row["guest_type"]
-        percentage = row["percent"]
-        textLabel = scenario
-        
-        percentage = int(re.search(r'\d+', percentage).group())
-        remainingPie = 100 - percentage
-        
-        donut_sizes = [remainingPie, percentage]
-        
-        plt.text(0.01, startingRadius - 0.25, textLabel, ha='right', va='bottom', fontsize = 12, 
-        fontweight = 'bold')
-        
-        plt.pie(donut_sizes, radius=startingRadius, startangle=0, colors=['lightgray', 'tomato'],
-                wedgeprops={"edgecolor": "white", 'linewidth': 1.5})
-        
-        startingRadius-=0.3
-
-    # equal ensures pie chart is drawn as a circle (equal aspect ratio)
-    plt.axis('equal')
-
-    # create circle and place onto pie chart
-    circle = plt.Circle(xy=(0, 0), radius=0.35, facecolor='white')
-    plt.gca().add_artist(circle)
-    plt.show()
-```
-
-``` python
-# plot the proportion of cancellations based on whether guests had babies, children or none.
-plt.title('82% of guests with babies \n did not cancel \n', fontsize = '18', fontweight = 'bold')
-donut_plot(pie_data, '1')
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
-
-Guests with babies followed through with their booking 83% of the time
-and 86% of guests who stayed with babies had at least one special
-request.
-
-### How do the hotel stays of guests with/without children vary throughout the year? Is this different between hotels?
-
-``` python
-#The first thing to do is create a dataframe filtered for non-canceled hotel stays
-#Prior to that convert children to a categorical variable
-hotels['kids'] = hotels.children + hotels.babies
-
-hotels = (hotels.assign(kids = lambda df: df.kids.map(
-                    lambda kids: 'kids' if kids > 0 else 'none')))
-```
-
-``` python
-# Map months of the year to numeric values to create arrival date column for exploration
-d = {'July':7, 'August':8, 'September':9, 'October':10, 'November':11, 'December':12, 'January':1, 'February':2, 'March':3, 'April':4, 'May': 5, 'June':6}
-hotels.arrival_date_month = hotels.arrival_date_month.map(d)
-
-#Recreated plot from tidy tuesday 
-
-df = (
-      hotels
-          .groupby(['hotel', 'arrival_date_month', 'kids'])
-          .size()
-          .groupby(level=[0,2])
-          .apply(lambda x: x/x.sum())
-          .reset_index()
-      )
-
-df.rename(columns = {0:'count'}, inplace=True)
-
-from plotnine import *
-
-ggplot(df, aes(x = 'arrival_date_month', y = 'count', fill = 'kids')) + \
-    geom_col(position='dodge') + facet_wrap(['hotel'], nrow = 2) + \
-    ggtitle("Percent Distribution of Guests with and without Kids")
-```
-
-    ## <ggplot: (7018379205)>
-
-![](Milestone_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
-
-Between both hotels, a majority of guests come without babies or
-children. Out of the year however, it is easy to predict when families
-will arrive, between both hotels families typically arrived in the
-summer months. This could be an opportunity to explore for each hotel.
+> In 2016, each hotel saw a slight dip in cancellations during the
+> summer months but this pattern does not seem to hold for the years
+> post and prior. Between hotels, the city locaiton has a much higher
+> daily average of cancellations, this may point to a higher capacity.
+> The city hotel also seems to suffer from multiple single day surges in
+> cancellations. Some research suggests this may be related to sporting
+> events but this is not
+confirmed.
 
 ### How does the average daily rate change with family size?
 
-``` python
-kids_condition = (hotels['children'] !=0) | (hotels['babies'] != 0)
-kids_per_guest = hotels[['hotel','adr','adults', 'babies', 'children']]
-kids_per_guest['kids'] = kids_per_guest['babies'] + kids_per_guest['children']
-
-# Filter out guests with more than 3 kids to eliminate outliers.
-```
-
-    ## /Users/mattmerrill/opt/anaconda3/bin/python3:1: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame.
-    ## Try using .loc[row_indexer,col_indexer] = value instead
-    ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-
-``` python
-kids_per_guest = kids_per_guest[kids_per_guest['kids'] <= 3]
-```
-
-``` python
-# plot average daily rate based on number of kids (babies and children combined) without adr outliers
-g = sns.catplot(x="hotel",
-y="adr", data=kids_per_guest, kind="box", hue = "kids", showfliers = False)
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+<img src="Milestone_files/figure-gfm/unnamed-chunk-42-1.png" width="536" />
 
 > The average revenue increases on average as family size increases for
-> both hotels.
+> both hotels. This should not come as a suprise, as the number of
+> guests increase it is expected that the average price will increase as
+> well, but guests typically travel with kids in the summer months and
+> have shown to be more commited to their reservations. Reaching out to
+> families during summer months may be a smart campaign to increase
+> daily actualized income and decrease cancellation rates.
 
-After exploring the data, it is clear that my hypothesis has been
-confirmed. The use of online travel agencies and cancelations increased,
-reaching a peak in the last year of the data with 56% of guests booking
-through an OTA and 41% of all guests canceling (up from 28% and 20%,
-respectively). However, there were some surprising insights gained as
-well.
+## Summary of Observations
 
-  - Customers who cancel typically have a longer lead time. Although
-    most cancellations come from customers who book through an OTA,
-    their average lead time is shorter than for other means of booking.
-    This means lead time may be another likely factor in determining
-    cancellations.
+After exploring the data, it is clear that the use of online travel
+agencies and cancelations increased over time, reaching a peak in the
+last year of the data with 56% of guests booking through an OTA and 41%
+of all guests canceling (up from 28% and 20%, respectively). However,
+there were some surprising insights gained as well.
+
+  - Customers who cancel typically have a longer lead time.
+  - Although majority of cancellations come from OTA’s, their average
+    lead time is less than other means of booking.
+  - Group bookings held a large share of cancellations in 2015 but
+    steadily decreased as OTA’s dominated the market.
+  - Cancellations seem to decrease in summer months.
   - Guests who booked with at least one baby were more likely to follow
-    through with the booking and were more likely to require
-    accommodations.
-  - The average daily rate increases with each added child to the
-    itinerary.
+    through with their booking.
   - Guests with kids represent a small portion of guests for both
     hotels, suggesting an untapped market.
 
@@ -865,17 +425,21 @@ those who book with a larger lead time are more likely to cancel. It
 seems that the trends in customer preference for online booking are
 directly correlated with an increase in cancellations. This leads me to
 believe that the market is seeking the flexibility and freedoms that
-come from risk free booking with OTAs. There are however a number of
-areas to continue exploring and confirm through statistical analysis.
-How confident can I be in this conclusion? The sample size for families
-is quite small, could their low rate of cancellation be due to the small
-sample size? How confident can I be in identifying lead time as a major
-factor in deciding cancellations?
+come from risk free booking with OTAs.
+
+There are however a number of areas to continue exploring and confirm
+through statistical analysis. How confident can we be in this
+conclusion? The sample size for families is quite small, could their low
+rate of cancellation be due to the small sample size? How confident can
+we be in identifying lead time as a major factor in deciding
+cancellations?
 
 ## Statistical Analysis
 
-Exploratory analysis revealed a number of potential predicting factors
-to determine if a guest will cancel. We can see that guests are more
+### Analysis of Categorical Variables
+
+Exploratory analysis revealed a number of significant factors in
+determining if a guest will cancel. We can see that guests are more
 likely to cancel if they are from an OTA or book with a larger lead
 time, and guests with babies are far less likely to cancel. We want to
 now consider what other variables may contribute to cancellations, such
@@ -884,8 +448,9 @@ as ‘agent’, ‘distribution\_channel’, ‘is\_repeated\_guest’, ‘count
 categorical in nature, my approach will utilize the chi-squared test for
 inferential analysis. To perform the chi-squared test, we create a
 contingency table of observed values and calculate the expected
-frequencies assuming the null hypothesis. Following this we calculate
-the chi-squared statistic with the following formula:
+frequencies assuming the null hypothesis that the feature in question
+has no influence on cancellations. Following this we calculate the
+chi-squared statistic with the following formula:
 
 \[\chi^2 = \sum_\ \frac{(O - E)^2}{E}\] Once this statistic is
 calculated, we compare it to the critical values of the chi-squared
@@ -895,1028 +460,719 @@ we can reject it if our test statistic is greater than our critical
 value. Below is an analysis of each of the identified variables with the
 result.
 
-``` python
-# import appropriate modules
-from scipy.stats import chisquare
-from scipy.stats import chi2
-from scipy.stats import chi2_contingency
-from scipy.stats import norm
-from scipy.stats import t
-from numpy.random import seed
-from scipy import stats
-```
+> The table of observed values for market segment is displayed above. If
+> we want to determine statistical significance, we need to compare
+> expected cancellation rates to the observed. Our assumption (null
+> hypothesis) is that there is no relationship between each categorical
+> feature and the likelihood of cancellation.
 
-### Analyze Categorical Variables
+> The null hypothesis is rejected for each of the tested columns,
+> suggesting an association with cancellations for each variable. The
+> conclusions here only confirm that there is a relationship, whether or
+> not numerous factors combined have a significant influence on
+> cancellations will be determined by our machine learning model.
 
-``` python
-# define function to output chi-squared test and results
-def chi2results(var1, var2, prob):
-    observed = pd.crosstab(var1, var2)
-    chi_square, p_val, dof, expected = chi2_contingency(observed)
-    critical = chi2.ppf(prob, dof)
-    
-    if abs(chi_square) >= critical:
-        result = 'Dependent (reject H0)'
-    else:
-        result = 'Independent (fail to reject H0)'
-    alpha = 1.0 - prob
-    
-    return chi_square, critical, p_val, dof, alpha, result
-```
+### Analysis of Numerical Variables
 
-``` python
-# two way table of market segment vs cancellations
-observed = pd.crosstab(hotels.is_canceled, hotels.market_segment)
-print(observed)
-```
-
-    ## market_segment  Aviation  Complementary  ...  Offline TA/TO  Online TA
-    ## is_canceled                              ...                          
-    ## 0                    185            646  ...          15908      35738
-    ## 1                     52             97  ...           8311      20739
-    ## 
-    ## [2 rows x 7 columns]
-
-``` python
-# set columns to test
-cat_cols = list(hotels.describe(exclude=[np.number]).columns.drop(['reservation_status', 'reservation_status_date', 'deposit_type', 'assigned_room_type', 'meal', 'country']))
-test_col = 'is_canceled'
-
-# Creating an empty Dataframe with column names only
-chi_square_results = pd.DataFrame(columns=['chi_square', 'critical_val', 'p_val', \
-                                            'dof', 'alpha', 'result'], index = cat_cols)
-for col in cat_cols:
-    res = chi2results(hotels[test_col], hotels[col], prob = 0.95)
-    chi_square_results.loc[col] = [res[0], res[1], res[2], res[3], res[4], res[5]]
-
-print(chi_square_results[['p_val', 'result']])
-```
-
-    ##                              p_val                 result
-    ## hotel                            0  Dependent (reject H0)
-    ## market_segment                   0  Dependent (reject H0)
-    ## distribution_channel             0  Dependent (reject H0)
-    ## reserved_room_type    8.87222e-134  Dependent (reject H0)
-    ## agent                            0  Dependent (reject H0)
-    ## company               1.80972e-297  Dependent (reject H0)
-    ## customer_type                    0  Dependent (reject H0)
-    ## kids                   1.07702e-05  Dependent (reject H0)
-
-The null hypothesis is rejected for each of the tested columns,
-suggesting an association with cancellations for each variable.
-
-### Analyze Numerical Variables
-
-To perform statistical analysis on numerical predictors, we calculate
-the t-statistic and determine the corresponding p-value. If the p-value
-is less than the 5% threshold for our 95% confidence interval we can
-consider this variable statistically significant in determining
+To perform statistical analysis on numerical predictors we need to
+determine if the observed difference between canceled and non-canceled
+bookings is significantly different. To do this we will utilize the
+t-test for statistical significance. We will calculate the t-statistic
+for each feature using a key metric, such as the average lead time, and
+determine the corresponding p-value which helps determine how likely an
+event is to occur under the null hypothesis. If the p-value is less than
+the 5% threshold for our 95% confidence interval we can consider this
+variable statistically significant in determining
 cancellations.
 
+#### Determining significance for average daily rate
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-47-1.png" width="1152" />
+
+> The null hypothesis for the average daily rate is that it has no
+> influence on whether or not a booking is likely to be canceled. We
+> will find out the liklihood of observing this outcome under the
+> assumption of the null hypothesis.
+
+#### Results of t-test for average daily rate
+
+> A p-value close to zero suggests that the outcome is statistically
+> significant because the liklihood of observing this outcome is ruled
+> as statistically close to zero. Thus we can conclude that the average
+> daily rate is important in determining if a booking will be canceled.
+> Next we will determine the significance of each of the other
+> continuous variables and enter the results in a data frame to be
+> analyzed. The following code summarizes the findings.
+
+### Restuls of t-test for all numeric variables
+
+Our findings suggest a large number of significant features to use in
+our model. However each of the confirmed statistically significant
+features must be examined to determine if they may cause data leakage.
+Hotel bookings typically change over time when guests choose to
+customize their reservation after the booking data. Some of these
+options affect how their profile is logged, making those customers who
+followed through with their booking seem more distinct than those who
+did not. For example, a customer who makes changes leading up to their
+booking will by far more likely to keep the reservation. Since our goal
+is to predict the possibility of a canceled booking given only the
+initial parameters of a booking, we must eliminate many of these sources
+of data leakage. After examining the data and reading carefully into the
+source of the data, it was determined that all features that hold the
+potential for changing over time must be eliminated. This was done prior
+to the statistical analysis and eliminated the following features:
+
+Eliminated sources of data leakage:
+
+  - Assigned room type
+  - booking changes
+  - deposit type
+  - reservation status
+  - reservation status date
+  - total of special requests
+  - stays in week nights
+  - stays in weekend nights
+  - meal
+  - adults
+
+### Selected features from statistical analysis phase
+
+## Feature Engineering
+
+This phase will transform our features to provide our model with data in
+a more digestible form. Skewed numericals will have to be normalized,
+high cardinality categorical features will need to be grouped and some
+numeric columns will need to be binned. Since our initial model will be
+using a distance based algorithm, it is important to normalize highly
+skewed features to lessen the influence of extreme values. To avoid
+overfitting we must group our high cardinality features and for
+extremely skewed features we use binning as an alternative to
+transforming. Our subsequent models will process faster, be less prone
+to overfitting and will better understand influences that determine
+cancellations.
+
+### Group categories into binary representations
+
+An extremely small percentage of guests visited with babies (\<1%).
+Because of this, the variation in the number of babies will only cause
+overfitting if we keep the guest counts, so it is best here to bin them
+into “babies” or “no babies”. Along with this, previous bookings and
+previous bookings that were not canceled account for less than a few
+percent of each variable, for best results we will group these into a
+binary representation as well.
+
+### Normalize variables for logistic regression
+
+The goal for highly skewed features is to normalize, or reduce the
+skewness, as this is an assumption of variables processed by our
+logistic regression model. For Random Forest this is not necessary, as
+it is able to handle variations in numerical data, so we will also keep
+the original
+column.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-66-1.png" width="960" />
+
 ``` python
-mean = np.mean(hotels['adr'])
-std = np.std(hotels['adr'], ddof = 1)
-_ = plt.hist(hotels['adr'], bins = 40, range = (0, 500))
-_ = plt.xlabel('Average Daily Rate (adr)')
-_ = plt.ylabel('frequency')
-_ = plt.axvline(mean, color='r')
-_ = plt.axvline(mean+std, color='r', linestyle='--')
-_ = plt.axvline(mean-std, color='r', linestyle='--')
-_ = plt.show()
+# apply sqrt tranformation for daily rate, skewness reduced to -0.38
+data['lead_time_sqrt'] = np.sqrt(data.lead_time)
+# replace NAN values
+data.replace(np.nan, 0, inplace=True)
 ```
 
-![](Milestone_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+<img src="Milestone_files/figure-gfm/unnamed-chunk-68-1.png" width="960" />
+
+### Group low-frequency entries into ‘other’
+
+Country and agent have over 150 categories, where many are less than a
+few hundred representations in the data. To aid our Random Forest model
+in predicting a correct split, we will reduce the cardinality
+significantly. This will result in less information, but it will aid in
+preventing overfitting.
+
+### Convert reserved room type to numeric using average price
 
 ``` python
-print('mean charges ' + str(round(mean, 2)))
+# Map numeric to room type based on cost of room
+d = {'A':1, 'D':2, 'E':3, 'other':4, 'F':5, 'G':6}
+data.reserved_room_type = data.reserved_room_type.map(d)
 ```
 
-    ## mean charges 101.83
+### Grouped Plots
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-75-1.png" width="960" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-76-1.png" width="960" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-77-1.png" width="960" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-78-1.png" width="960" />
+
+### Data leakage
+
+County is a source of data leakage. Bookings that fail to show up are
+often marked as being from the home country, it is not until the arrival
+that the nationality becomes more accurate. This results in an uneven
+distribution of canceled bookings from the home country which is
+innaccurate and misleading for the model. This can be observed in the
+plot
+below.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-79-1.png" width="960" />
 
 ``` python
-print('standard deviation ' + str(round(std, 2)))
+# drop country column to avoid data leakage
+data = data.drop('country', axis=1)
 ```
 
-    ## standard deviation 50.53
+### Final representation of numeric and categorical columns
 
-The null hypothesis for the average daily rate is that it has no
-influence on whether or not a booking is likely to be canceled.
+## Logistic regression
 
-``` python
-# Define samples
-sample0 = hotels[hotels.is_canceled == 1]['adr']
-sample1 = hotels[hotels.is_canceled == 0]['adr']
-n_0 = len(sample0)
-n_1 = len(sample1)
-# Define mean and standard deviation for each group
-x_0 = np.mean(sample0)
-x_1 = np.mean(sample1)
-s_0 = np.std(sample0, ddof = 1)
-s_1 = np.std(sample1, ddof = 1)
-# degrees of freedom
-df = n_0 + n_1 - 2
-```
+We start with a basic logistic regression model pipped with a standard
+scalar to allow our features to be more digestible and comparable for
+the model algorithm. An appropriate measurement will be accuracy, which
+gives the percentage of correct predictions, and the area under the ROC
+curve which measures how well the model can differentiate between
+classes. The scores we receive from these measurements in our logistic
+regression classification model will be used as a benchmark for
+improvement.
 
-``` python
-# calculate t-statistic and p-value
-t, pval = stats.ttest_ind_from_stats(x_0, s_0, n_0, x_1, s_1, n_1)
+### Apply dummy coding techinques
 
-print(t, pval)
-```
+Our logistic regression model can only handle numeric variables, while
+encoding the categorical features would produce numeric values it would
+create a false sense of order among categories. To avoid putting meaning
+to a randomly assigned order we will use pandas get\_dummies which will
+split each category into its own column, made up of 0’s and 1’s to
+represent if it is relevant for that observation. To avoid correlated
+features we use the option “drop\_first”, which drops one column for
+each category (it isn’t needed because it is easy to make the assumption
+that if no other categories are relevant, the dropped feature must be
+true).
 
-    ## 16.464155106230862 7.749454084810186e-61
+#### Logistic Regression Data
 
-The results reject the null hypothesis. The confidence interval is far
-greater than the accepted 95% needed to accept this outcome. Thus we can
-conclude that the average daily rate is important in determining if a
-booking will be canceled. Next we will determine the significance of
-each of the other continuous variables and enter the results in a data
-frame to be analyzed. The following code summarizes the findings.
+### Split the Data into train and test
 
 ``` python
-def significance(col):
-  ''' this function will return the t-stat and pval of a feature of interest '''
-  # Define samples
-  sample0 = hotels[hotels.is_canceled == 1][col]
-  sample1 = hotels[hotels.is_canceled == 0][col]
-  n_0 = len(sample0)
-  n_1 = len(sample1)
-  # Define mean and standard deviation for each group
-  x_0 = np.mean(sample0)
-  x_1 = np.mean(sample1)
-  s_0 = np.std(sample0, ddof = 1)
-  s_1 = np.std(sample1, ddof = 1)
-  # degrees of freedom
-  df = n_0 + n_1 - 2
-  
-  t, pval = stats.ttest_ind_from_stats(x_0, s_0, n_0, x_1, s_1, n_1)
-  
-  if pval <= 0.05:
-      result = 'Dependent (reject H0)'
-  else:
-      result = 'Ind (fail to reject H0)'
-    
-  return t, pval, result
-```
-
-``` python
-# List of numerical excluding features with potential for data leakage. 
-num_cols = list(hotels.describe(include=[np.number]).columns.drop(['stays_in_week_nights', 'stays_in_weekend_nights', 'adults', 'children', 'is_canceled', 'total_of_special_requests', 'required_car_parking_spaces', 'booking_changes']))
-
-# Creating an empty Dataframe with column names only
-t_stat_results = pd.DataFrame(columns=['t_stat', 'p_val', 'result'], index = num_cols)
-
-for col in num_cols:
-  res = significance(col)
-  t_stat_results.loc[col] = [res[0], res[1], res[2]]
-
-print(t_stat_results)
-```
-
-    ##                                  t_stat         p_val                 result
-    ## lead_time                       105.945             0  Dependent (reject H0)
-    ## arrival_date_year               5.76971    7.9602e-09  Dependent (reject H0)
-    ## arrival_date_month              3.80503   0.000141855  Dependent (reject H0)
-    ## arrival_date_week_number         2.8128    0.00491207  Dependent (reject H0)
-    ## arrival_date_day_of_month      -2.10804     0.0350293  Dependent (reject H0)
-    ## babies                         -11.2319   2.94126e-29  Dependent (reject H0)
-    ## is_repeated_guest               -29.403  2.39542e-189  Dependent (reject H0)
-    ## previous_cancellations          38.2876             0  Dependent (reject H0)
-    ## previous_bookings_not_canceled -19.8507   1.50658e-87  Dependent (reject H0)
-    ## days_in_waiting_list            18.7513   2.45186e-78  Dependent (reject H0)
-    ## adr                             16.4642   7.74945e-61  Dependent (reject H0)
-
-## Machine Learning
-
-Our findings from the statistical analysis phase suggest a large number
-of significant features to use in our model. However each of the
-confirmed statistically significant features must be examined to
-determine if they may cause data leakage. Hotel bookings typically
-change over time given customers options to customize their reservation.
-Some of these options affect how their profile is logged, making those
-customers who followed through with their booking seem more distinct
-than those who did not. For example, a customer who makes changes
-leading up to their booking will by far more likely to keep the
-reservation. Since our goal is to predict the possibility of a canceled
-booking given only the initial parameters of a booking, we must
-eliminate many of these sources of data leakage. After examining the
-data and reading carefully into the source of the data, it was
-determined that all features that hold the potential for changing over
-time must be eliminated.
-
-To begin the machine learning phase the data must be split into features
-and labels, and the feature variables must be encoded to resolve issues
-for our model such as strings and high level categorical columns.
-
-### Split the Data
-
-``` python
-# Use results from statistical analysis to form features list
-cat_features = chi_square_results.index.to_list()
-num_features = t_stat_results[t_stat_results['result'] != 'Ind (fail to reject H0)'].index.to_list()
-features = cat_features + num_features
-```
-
-``` python
-# load appropriate modules
-from numpy import array
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import OneHotEncoder
-
-X = hotels[features]
+# Split data into features and label
+# features X
+X = log_reg_data.drop('is_canceled', axis=1)
         
-# Dummy coding
-y = hotels['is_canceled']
+# Label y
+y = log_reg_data['is_canceled']
 
-# Dummy coding for col in cols
-dummy_cols = ['market_segment', 'distribution_channel', 'hotel', 'kids', 'reserved_room_type', 'customer_type']
-transformed = []
-for col in dummy_cols:
-  X[col] = pd.get_dummies(X[col])
-
-# Label Encoder
-```
-
-    ## /Users/mattmerrill/opt/anaconda3/bin/python3:2: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame.
-    ## Try using .loc[row_indexer,col_indexer] = value instead
-    ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-
-``` python
-enc_cols = ['agent', 'company']
-for col in enc_cols:
-  data = hotels[col].to_list()
-  values = array(data)
-  # initialize labelencoder, fit and transform
-  label_encoder = LabelEncoder()
-  integer_encoded = label_encoder.fit_transform(values)
-  transformed.append(integer_encoded)
-  # Drop country column and replace with encoded 
-  X.drop(col, axis = 1, inplace = True)
-  X[col] = integer_encoded
-```
-
-    ## /Users/mattmerrill/opt/anaconda3/lib/python3.7/site-packages/pandas/core/frame.py:4102: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame
-    ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-    ##   errors=errors,
-    ## /Users/mattmerrill/opt/anaconda3/bin/python3:10: SettingWithCopyWarning: 
-    ## A value is trying to be set on a copy of a slice from a DataFrame.
-    ## Try using .loc[row_indexer,col_indexer] = value instead
-    ## 
-    ## See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-
-``` python
-print(X.head())
-```
-
-    ##    hotel  market_segment  distribution_channel  ...   adr  agent  company
-    ## 0      0               0                     0  ...   0.0      0        0
-    ## 1      0               0                     0  ...   0.0      0        0
-    ## 2      0               0                     0  ...  75.0      0        0
-    ## 3      0               0                     1  ...  75.0    157        0
-    ## 4      0               0                     0  ...  98.0    103        0
-    ## 
-    ## [5 rows x 19 columns]
-
-### Logistic regression
-
-``` python
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score
-
-#scaler in pipeline object, use logreg algorithm
-steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression())]
-pipeline = Pipeline(steps)
-
-logreg = LogisticRegression()
 X_train, X_test, y_train, y_test = \
-    train_test_split(X.values, y.values, test_size=0.3, random_state=3)
+    train_test_split(X, y, test_size=0.20, random_state=3)
+```
 
+### Fit out of the box Logisitic Regression
+
+``` python
 # fit on training set
-logreg_scaled = pipeline.fit(X_train, y_train)
+logreg = LogisticRegression(max_iter=10000).fit(X_train, y_train)
 # predict on test set
-y_pred = pipeline.predict(X_test)
+y_pred = logreg.predict(X_test)
 accuracy_score(y_test, y_pred)
 ```
 
-    ## 0.701287098305274
-
-``` python
-def display_plot(cv_scores, cv_scores_std):
-    '''This function will plot the r squared 
-    score as well as standard error for each alpha'''
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    ax.plot(alpha_space, cv_scores)
-
-    std_error = cv_scores_std / np.sqrt(10)
-
-    ax.fill_between(alpha_space, cv_scores + std_error, \
-                    cv_scores - std_error, alpha=0.2)
-    ax.set_ylabel('CV Score +/- Std Error')
-    ax.set_xlabel('Alpha')
-    ax.axhline(np.max(cv_scores), linestyle='--', color='.5')
-    ax.set_xlim([alpha_space[0], alpha_space[-1]])
-    ax.set_xscale('log')
-    plt.show()
-```
-
-#### Perform ridge regression and plot ridge scores vs. ridge scores std
-
-``` python
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import cross_val_score
-# Setup the array of alphas and lists to store scores
-alpha_space = np.logspace(-4, 3, 50)
-ridge_scores = []
-ridge_scores_std = []
-
-# Create a ridge regressor: ridge
-ridge = Ridge(normalize=True)
-
-# Compute scores over range of alphas
-for alpha in alpha_space:
-
-    # Specify the alpha value to use: ridge.alpha
-    ridge.alpha = alpha
-    
-    # Perform 10-fold CV: ridge_cv_scores
-    ridge_cv_scores = cross_val_score(ridge, X.values, y.values, cv = 5)
-    
-    # Append the mean of ridge_cv_scores to ridge_scores
-    ridge_scores.append(np.mean(ridge_cv_scores))
-    
-    # Append the std of ridge_cv_scores to ridge_scores_std
-    ridge_scores_std.append(np.std(ridge_cv_scores))
-
-# Display the plot
-display_plot(ridge_scores, ridge_scores_std)
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-47-1.png)<!-- -->
-
-#### Perform Lasso feature selection to determine influential variables.
-
-``` python
-# Lasso for feature selection in scikit learn
-#store feature names
-from sklearn.linear_model import Lasso
-names = X.columns
-lasso = Lasso(alpha=0.01)
-# extract coef attribute and store
-lasso_coef = lasso.fit(X, y).coef_
-_ = plt.figure(figsize=(20,10))
-_ = plt.plot(range(len(names)), lasso_coef)
-_ = plt.xticks(range(len(names)), names, rotation=45)
-_ = plt.ylabel('Coefficients')
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-48-1.png)<!-- -->
-
-> It seems that hotels may be a source of overfitting. Since the
-> documentation does not allude to any potential for data leakage among
-> the hotels, this will be ignored for now.
-
-#### Plot the ROC curve.
-
-``` python
-from sklearn.metrics import roc_auc_score
-from sklearn import preprocessing
-from sklearn.metrics import roc_curve
-
-# plotting the ROC curve
-y_pred_prob = pipeline.predict_proba(X_test)[:,1]
-fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
-
-plt.plot(fpr, tpr, label = 'Logistic Regression')
-```
-
-    ## [<matplotlib.lines.Line2D object at 0x1a2a137f50>]
-
-``` python
-plt.xlabel('True Positive Rate')
-```
-
-    ## Text(0.5, 0, 'True Positive Rate')
-
-``` python
-plt.ylabel('True Positive Rate')
-```
-
-    ## Text(0, 0.5, 'True Positive Rate')
-
-``` python
-plt.title('Logistic Regression ROC Curve')
-```
-
-    ## Text(0.5, 1.0, 'Logistic Regression ROC Curve')
-
-``` python
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
-
-#### Tune the model with Kfold cross validation
-
-``` python
-# tuning the modal
-from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score
-
-def cv_score(clf, x, y, score_func=accuracy_score):
-    result = 0
-    nfold = 5
-    for train, test in KFold(nfold).split(x): # split data into train/test groups, 5 times
-        clf.fit(x[train], y[train]) # fit
-        result += score_func(clf.predict(x[test]), y[test]) # evaluate score function on held-out data
-    return result / nfold # average
-```
-
-``` python
-#scaler in pipeline object, use logreg algorithm
-steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression(max_iter=200))]
-pipeline = Pipeline(steps)
-score = cv_score(pipeline, X_train, y_train)
-print(score)
-```
-
-    ## 0.7033061312572861
-
-#### Use grid search to optimize the inverse regularization parameter
-
-``` python
-#the grid of parameters to search over
-Cs = [0.001, 0.1, 1, 10, 100]
-
-# create empty dataframe 
-df = pd.DataFrame(columns=['Cs', 'cv_score'])
-
-# loop through and add scores    
-for c in Cs:
-    #scaler in pipeline object, use logreg algorithm
-    steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression(C=c, max_iter=1000))]
-    pipeline = Pipeline(steps)
-    score = cv_score(pipeline, X_train, y_train)
-    df = df.append({'Cs' : c , 'cv_score' : score} , ignore_index=True)
-print(df[df.cv_score == df.cv_score.max()])
-```
-
-    ##       Cs  cv_score
-    ## 4  100.0  0.703402
-
-#### Compute accuracy score with the c-value that produces the highest accuracy.
-
-``` python
-#scaler in pipeline object, use logreg algorithm
-steps = [('scaler', StandardScaler()), \
-         ('logreg', LogisticRegression(C = 100, max_iter=1000))]
-pipeline = Pipeline(steps)
-pipeline.fit(X_train, y_train)
-# Print the accuracy from the testing data.
-```
-
-    ## Pipeline(memory=None,
-    ##          steps=[('scaler',
-    ##                  StandardScaler(copy=True, with_mean=True, with_std=True)),
-    ##                 ('logreg',
-    ##                  LogisticRegression(C=100, class_weight=None, dual=False,
-    ##                                     fit_intercept=True, intercept_scaling=1,
-    ##                                     l1_ratio=None, max_iter=1000,
-    ##                                     multi_class='auto', n_jobs=None,
-    ##                                     penalty='l2', random_state=None,
-    ##                                     solver='lbfgs', tol=0.0001, verbose=0,
-    ##                                     warm_start=False))],
-    ##          verbose=False)
-
-``` python
-print(accuracy_score(pipeline.predict(X_test), y_test))
-```
-
-    ## 0.701287098305274
-
-> The accuracy score with logistic regression may be improved by using a
-> Random Forest but there is more potential for overfitting with this
-> approach.
-
-### Random Forests
-
-``` python
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-
-sc = StandardScaler()
-X_train = sc.fit_transform(X_train)
-X_test = sc.transform(X_test)
-
-rfc = RandomForestClassifier(n_estimators=20, max_features='sqrt', random_state=94)
-rfc.fit(X_train, y_train)
-```
-
-    ## RandomForestClassifier(bootstrap=True, ccp_alpha=0.0, class_weight=None,
-    ##                        criterion='gini', max_depth=None, max_features='sqrt',
-    ##                        max_leaf_nodes=None, max_samples=None,
-    ##                        min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                        min_samples_leaf=1, min_samples_split=2,
-    ##                        min_weight_fraction_leaf=0.0, n_estimators=20,
-    ##                        n_jobs=None, oob_score=False, random_state=94, verbose=0,
-    ##                        warm_start=False)
-
-``` python
-y_pred = rfc.predict(X_test)
-print(y_pred)
-```
-
-    ## [0 1 0 ... 1 0 0]
-
-``` python
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import cross_val_score
-
-print(confusion_matrix(y_test,y_pred))
-```
-
-    ## [[20244  2267]
-    ##  [ 4151  9155]]
-
-``` python
-print(classification_report(y_test,y_pred))
-```
-
-    ##               precision    recall  f1-score   support
-    ## 
-    ##            0       0.83      0.90      0.86     22511
-    ##            1       0.80      0.69      0.74     13306
-    ## 
-    ##     accuracy                           0.82     35817
-    ##    macro avg       0.82      0.79      0.80     35817
-    ## weighted avg       0.82      0.82      0.82     35817
-
-``` python
-print(accuracy_score(y_test, y_pred))
-```
-
-    ## 0.8208113465672725
-
-#### Plot Random Forests ROC curve
-
-``` python
-from sklearn.metrics import roc_auc_score
-from sklearn import preprocessing
-from sklearn.metrics import roc_curve
-
-# plotting the ROC curve
-y_pred_prob = rfc.predict_proba(X_test)[:,1]
-fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
-
-plt.plot(fpr, tpr, label = 'Random Forest')
-```
-
-    ## [<matplotlib.lines.Line2D object at 0x1a2baad390>]
-
-``` python
-plt.xlabel('True Positive Rate')
-```
-
-    ## Text(0.5, 0, 'True Positive Rate')
-
-``` python
-plt.ylabel('True Positive Rate')
-```
-
-    ## Text(0, 0.5, 'True Positive Rate')
-
-``` python
-plt.title('Random Forest ROC Curve')
-```
-
-    ## Text(0.5, 1.0, 'Random Forest ROC Curve')
-
-``` python
-plt.show()
-```
-
-![](Milestone_files/figure-gfm/unnamed-chunk-56-1.png)<!-- -->
-
-> The accuracy score did improve with RF and the ROC curve is looking
-> much better. Next I will move to tune some of the hyperparameters,
-> specifically the number of estimators and the max depth.
+### Plot the ROC curve.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-90-1.png" width="960" />
+
+> Our benchmark is a ~75% accuracy and an ~80% AUROC score. Let’s see if
+> we can improve this with KFold cross validation and some parameter
+> tuning.
+
+### Cross-validation accuracy score
+
+### Ridge (L1) and Lasso (L2) Feature Selection
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-95-1.png" width="960" />
+
+> Lasso may give us better results, as we are using a significant number
+> of predictors at this point and zero-ing some out may be a better
+> approach than dampening with
+ridge.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-97-1.png" width="960" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-99-1.png" width="2400" />
+
+> Feature selection with L2 penalty has put a lot of importance on
+> binary features with clear correlations to cancellations. For example,
+> agent 40 seems to produce bookings that rarely cancel, however there
+> are very few guests who booked through this agent. Previous
+> cancellations are another example, very few guests stayed with either
+> hotel in the past, and even fewer have previous cancellations, but
+> this is the most important feature identified by the
+model.
+
+### Final Logistic Regression Model using L1 regularization for eliminating non-contributing features
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-102-1.png" width="960" />
+
+The final accuracy score with our penalized model imporved very little
+from the out of box score. There were also some questionable choices for
+feature selection, most of the most influential were of low occurance.
+If we are fitting on data with very few of the important features, which
+would be more typical in a real world sense, the model would be a poor
+fit more often than not.
+
+Our next option will be to employ a Random Forest algorithm. There is no
+need for normalizing data in this approach but it will still benefit
+from dummy coding. Random forests are fast and interpretable, similar to
+logistic regression, but there is more potential for overfitting with
+this approach.
+
+## Random Forests
+
+While our Logisitic Regression model fits our data quickly, it may be
+underfitting due to it’s more simplistic approach. Our goal here is to
+get a realistic idea of whether a guest will cancel, we want our end
+model to therefore run quickly but also be able to distinguish between
+classes with relative confidence. Since we only need to identify guests
+who have a greater potential for cancellation, accuracy is not as
+important, as factors that go into cancellations are far more complex
+then what the scope of our data can provide.
+
+Moving from Logistic Regression, our next attempt will be to fit with a
+Random Forest Classifier. This will improve the usability of the model
+because of it’s ability to handle non-linear features and outliers. The
+data we use will not have to be binned or scaled, making it useful for
+raw data to be plugged and predicted in the web app and for general use
+by hotel personel. The final model with tuning will most likely overfit
+however, to combat this we will do some feature selection with sci-kit
+learns permutation importance method and will prioritize usability over
+small metric
+improvements.
+
+### Default parameter Random Forest classifier
+
+### Plot Random Forests ROC curve
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-109-1.png" width="960" />
+
+> Immediately we see a significant improvement with Random Forests. Our
+> accuracy score jumped from 75% to 83% and our AUROC improved from 80%
+> to 90%. This is significant and will be noted as our benchmark from
+> here, our next steps will attempt to simplify the model while
+> maintaining our key measurements. In the end, usability in terms of
+> speed and features need to be kept in mind along with the models
+> ability to distinguish between classes.
+
+### Feature selection using permutation importance
+
+In order to reduce the complexity of the model and make it more usable
+for deployment, we need to select only the features that are relevant to
+predicting cancellations. Random Forests has two methods of computing
+importance, impurity based and permutation. Since our data consists of
+some high cardinality categorical features, it is best to use
+permutation as impurity based selection is biased towards these types of
+features [\[Permutation Importance vs Random Forest Feature
+Importance\]](https://scikit-learn.org/stable/auto_examples/inspection/plot_permutation_importance.html).
+Based on the results here, we can move forward with tuning and finalize
+our model for
+production.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-111-1.png" width="1152" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-112-1.png" width="1152" />
+
+Our training set seems to be overfitting on the date of arrival but a
+number of other features share common importance. Lead time and average
+daily rate seem to be dominating the models evaluation. Our selected
+features for our next model will be a mix of features that are observed
+as significant in the plots above mixed with features identified as
+important from the exploratory phase, such as online travel agency
+bookings and direct
+bookings.
+
+### Re-run model with selected features
+
+### Default parameter Random Forest classifier
+
+### Feature importance for selected features
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-118-1.png" width="1152" />
+
+### Plot Random Forests ROC curve
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-119-1.png" width="960" />
+
+We have sacrificed a minor drop in accuracy and AUROC score for limiting
+our features from 36 to 11. The complexity of the model has dropped
+significantly which will help with processing speed and
+interpretability. We can see now the importance of features not
+previously considered, like average daily rate and arrival date; these
+are now seen as significant indicators of a potential cancellation.
+
+### Cross-validation with default parameters and selected features
+
+> Our cross-validated AUROC score is around our 90% benchmark with only
+> a minor overall loss from reducing the number of features.
 
 #### Hyperparameter tuning with RandomizedSearchCV
 
-``` python
-from sklearn.model_selection import RandomizedSearchCV
-# number of trees in random forest
-n_estimators = [int(x) for x in np.linspace(start = 20, stop = 200, num = 10)]
-# number of features at every split
-# max depth
-max_depth = [int(x) for x in np.linspace(100, 500, num = 11)]
-max_depth.append(None)
+We may be able to see greater improvement from searching through
+parameters for our random forest model. The cost of running our
+randomized search is that our model may overfit and run slower than
+preferred. If the results from the search show significant enough
+improvement however, the trade-off may be worth the ability to predict
+and understand factors that go into potential
+cancellations.
 
-# create random grid
-random_grid = {
- 'n_estimators': n_estimators,
- 'max_depth': max_depth,
- }
- 
-# Random search of parameters
-rfc_random = RandomizedSearchCV(estimator = rfc, param_distributions = random_grid, cv = 5, random_state=42)
-# Fit the model
-rfc_random.fit(X_train, y_train)
-# print results
-```
+### Plot Tuned Random Forests ROC curve
 
-    ## RandomizedSearchCV(cv=5, error_score=nan,
-    ##                    estimator=RandomForestClassifier(bootstrap=True,
-    ##                                                     ccp_alpha=0.0,
-    ##                                                     class_weight=None,
-    ##                                                     criterion='gini',
-    ##                                                     max_depth=None,
-    ##                                                     max_features='sqrt',
-    ##                                                     max_leaf_nodes=None,
-    ##                                                     max_samples=None,
-    ##                                                     min_impurity_decrease=0.0,
-    ##                                                     min_impurity_split=None,
-    ##                                                     min_samples_leaf=1,
-    ##                                                     min_samples_split=2,
-    ##                                                     min_weight_fraction_leaf=0.0,
-    ##                                                     n_estimators=20,
-    ##                                                     n_jobs=None,
-    ##                                                     oob_score=False,
-    ##                                                     random_state=94, verbose=0,
-    ##                                                     warm_start=False),
-    ##                    iid='deprecated', n_iter=10, n_jobs=None,
-    ##                    param_distributions={'max_depth': [100, 140, 180, 220, 260,
-    ##                                                       300, 340, 380, 420, 460,
-    ##                                                       500, None],
-    ##                                         'n_estimators': [20, 40, 60, 80, 100,
-    ##                                                          120, 140, 160, 180,
-    ##                                                          200]},
-    ##                    pre_dispatch='2*n_jobs', random_state=42, refit=True,
-    ##                    return_train_score=False, scoring=None, verbose=0)
+<img src="Milestone_files/figure-gfm/unnamed-chunk-128-1.png" width="960" />
+
+Little improvement was observed with parameter tuning using Random
+Forests. The final model is costly in run time and may slow down our web
+application. A faster model that does well with categorical features is
+catboost, we will explore results with this model next and utilize its
+feature importance visualizations to understand the impact of each.
+
+### Catboost classification model
+
+Catboost is an excellent machine learning classifier for explainability
+and has a faster implementation which will be helpful for quick
+predictions. Even better, the Catboost algorithm handles categorical
+features without the need for transformation. This significantly
+improves the usability, given that when it is used in the web app, there
+will be no need to process inputs from the user interface. If we can
+achieve comparable metrics with this model it may be our best route for
+deployment of the model.
+
+The data we will use will be the same as the start of our Random Forest
+model. We will go through the same steps as before by running the model
+with all features of interest and then reducing the number of features
+by looking at their importance. Catboost is unique in that it’s feature
+importances can be plotted individually and evaluated against other
+features. This is a significant advantage for reporting not just what
+features are significant but for what values they tend to produce
+cancellations.
+
+#### Fit out of the box
 
 ``` python
-print(rfc_random.best_params_)
-```
-
-    ## {'n_estimators': 160, 'max_depth': 260}
-
-``` python
-# Implementing parameter tuning with n_estimators=160 and max_depth=260
-rfc = RandomForestClassifier(n_estimators=160, max_depth=260, max_features='sqrt')
-rfc.fit(X_train,y_train)
-```
-
-    ## RandomForestClassifier(bootstrap=True, ccp_alpha=0.0, class_weight=None,
-    ##                        criterion='gini', max_depth=260, max_features='sqrt',
-    ##                        max_leaf_nodes=None, max_samples=None,
-    ##                        min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                        min_samples_leaf=1, min_samples_split=2,
-    ##                        min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                        n_jobs=None, oob_score=False, random_state=None,
-    ##                        verbose=0, warm_start=False)
-
-``` python
-rfc_predict = rfc.predict(X_test)
-# Cross validation
-rfc_cv_score = cross_val_score(rfc, X_train, y_train, cv=5, scoring='roc_auc')
-print("=== Confusion Matrix ===")
-```
-
-    ## === Confusion Matrix ===
-
-``` python
-print(confusion_matrix(y_test, rfc_predict))
-```
-
-    ## [[20289  2222]
-    ##  [ 4052  9254]]
-
-``` python
-print('\n')
+#Model training
+model = CatBoostClassifier(
+    custom_loss=['AUC', 'Accuracy'],
+    random_seed=42,
+    logging_level='Silent'
+)
 ```
 
 ``` python
-print("=== Classification Report ===")
+model.fit(
+    X_train, y_train,
+    cat_features=categorical_features_indices,
+    eval_set=(X_validation, y_validation),
+#     logging_level='Verbose',  # you can uncomment this for text output
+    plot=True
+);
 ```
 
-    ## === Classification Report ===
+#### Cross-validation
 
 ``` python
-print(classification_report(y_test, rfc_predict))
+#Cross validation
+cv_params = model.get_params()
+cv_params.update({
+    'loss_function': 'Logloss'
+})
+cv_data = cv(
+    Pool(X, y, cat_features=categorical_features_indices),
+    cv_params,
+    plot=True
+)
 ```
 
-    ##               precision    recall  f1-score   support
-    ## 
-    ##            0       0.83      0.90      0.87     22511
-    ##            1       0.81      0.70      0.75     13306
-    ## 
-    ##     accuracy                           0.82     35817
-    ##    macro avg       0.82      0.80      0.81     35817
-    ## weighted avg       0.82      0.82      0.82     35817
+### Feature Importance
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-140-1.png" width="768" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-141-1.png" width="768" />
+
+> The results of the shap summary plot reveal how each feature impacts
+> the model output. Each dot represents a prediction, with red
+> indicating a high feature value and blue a low feature value. Dots to
+> the right show a positive impact, meaning a higher probability of
+> canceling and dots to the left indicate lower probability of
+> canceling. We can conclude here that higher lead time and previous
+> cancellations correlate to a greater possibility that a customer will
+> cancel.
+
+> From the findings above we will take the top influential features to
+> run the model again. Some features that do not show strong importance
+> will be used because of the discoveries made during the exploratory
+> analysis phase. Although online TA and direct bookings are not high on
+> the list, these were of clear importance in our exploratory
+plots.
+
+#### Final dataframe for catboost model
+
+### Re-run model with selected features
 
 ``` python
-print('\n')
+categorical_features_indices = np.where((X.dtypes != np.float) & (X.dtypes != np.int))[0]
+
+#Model training
+model = CatBoostClassifier(
+    custom_loss=['AUC', 'Accuracy'],
+    random_seed=42,
+    logging_level='Silent'
+)
+
+model.fit(
+    X_train, y_train,
+    cat_features=categorical_features_indices,
+    eval_set=(X_validation, y_validation),
+#     logging_level='Verbose'
+    plot=True
+);
 ```
 
 ``` python
-print("=== All AUC Scores ===")
+#Cross validation
+cv_params = model.get_params()
+cv_params.update({
+    'loss_function': 'Logloss'
+})
+cv_data = cv(
+    Pool(X, y, cat_features=categorical_features_indices),
+    cv_params,
+    plot=True
+)
 ```
 
-    ## === All AUC Scores ===
+<img src="Milestone_files/figure-gfm/unnamed-chunk-149-1.png" width="768" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-150-1.png" width="768" />
+
+Our initial model with selected features is putting a lot of importance
+on lead time and previous cancellations. We can see the benefit of using
+dummy coding to separate specific aspects of a customer’s booking
+details. It is clear that transient bookings are more likely to cancel
+along with those who booked with a group tour. Something interesting to
+point out here is that our model is seeing OTA bookings as having
+greater influence on a customer not cancelling than previously thought.
+This could be due to the fact that OTA bookings are often made with
+little lead time, and as we can see, shorter lead times are highly
+correlated to non-canceled bookings. It will be interesting to see
+however, how customers who booked through an OTA with a large lead time
+are interpreted by the model. First however, we need to improve our
+model by selecting the learning rate and increasing the number of
+iterations.
+
+### Tune Catboost Model with selected features
+
+To tune our model we must select the learning rate, which works in hand
+with the number of iterations. Since our model requires more iterations
+to reach the best prediction our learning rate will be relatively low.
+We will test two learning rates, 0.2 and 0.5, to see which produces the
+best outcome. In the end however, if our model does not show much
+improvement, speed will be prefered over a minor metric improvement.
 
 ``` python
-print(rfc_cv_score)
-```
+model_selected1 = CatBoostClassifier(
+    learning_rate=0.2,
+    iterations=4000,
+    random_seed=0,
+    custom_loss=['AUC', 'Accuracy'],
+    logging_level='Silent',
+    train_dir='learing_rate_0.2'
+)
 
-    ## [0.88495728 0.89112038 0.88446442 0.8864108  0.88539778]
+model_selected2 = CatBoostClassifier(
+    learning_rate=0.05,
+    iterations=3000,
+    random_seed=0,
+    custom_loss=['AUC', 'Accuracy'],
+    logging_level='Silent',
+    train_dir='learing_rate_0.05'
+)
+model_selected1.fit(
+    X_train, y_train,
+    eval_set=(X_validation, y_validation),
+    cat_features=categorical_features_indices,
+    verbose=False
+)
+```
 
 ``` python
-print('\n')
+model_selected2.fit(
+    X_train, y_train,
+    eval_set=(X_validation, y_validation),
+    cat_features=categorical_features_indices,
+    verbose=False
+)
 ```
+
+### Run with optimal learning rate
 
 ``` python
-print("=== Mean AUC Score ===")
+categorical_features_indices = np.where((X.dtypes != np.float) & (X.dtypes != np.int))[0]
+
+model_final = CatBoostClassifier(
+    iterations=4000,
+    random_seed=63,
+    learning_rate=0.2,  # learning rate of 0.2 from tuning step
+    custom_loss=['AUC', 'Accuracy'],
+    logging_level='Silent'
+#     use_best_model=False
+)
+model_final.fit(
+    X_train, y_train,
+    cat_features=categorical_features_indices,
+    eval_set=(X_validation, y_validation),
+    verbose=False,
+    plot=True
+)
 ```
 
-    ## === Mean AUC Score ===
+#### Cross-validation data
+
+### Feature importance
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-159-1.png" width="768" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-160-1.png" width="768" />
+
+Increasing the iterations and selecting the learning rate has
+significantly improved our model. The summary plot of our tuned model
+has also revealed some changes to its interpretation. We can see now
+that direct bookings and transient party bookings have centered,
+implying less importance than previously thought. The model has also
+started to interpret OTA bookings as more influential towards
+cancellations than before. Next we will gain some insight into each of
+the important features identified and their relationship to other
+features using the dependency plot option in shap.
+
+### Feature Dependencies
+
+The dependency plot is a useful tool for interpreting the features that
+are most influential for our final model. Similar to summary plot, each
+point represents a booking, with the location based on the shap value.
+If the shap value is negative, the feature is more important in
+predicting non-canceled bookings, if it is positive then it would imply
+the opposite. For our most important predictors we want to get an idea
+of what is driving
+cancellations.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-161-1.png" width="720" />
+
+> The color of the plot is labeled as relating to bookings made through
+> an OTA, with red meaning the guest did use this means of booking. What
+> we can see is a high correlation between bookings with larger lead
+> times and potential for cancellation, reaching far above neutral after
+> about that one year mark. We can also see that bookings with very
+> little lead time often are followed through with. It looks like OTA
+> bookings make up much of the lower lead time bookings, but when the
+> lead time increases past about 200 days, OTA bookings seem to have an
+> increased risk of cancellation. This is an interesting observation, it
+> seems that OTA bookings greater than 200 days have a higher risk of
+> cancellation than other
+means.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-162-1.png" width="720" />
+
+> The plot above displays the average daily rate, with the hue related
+> to the week of arrival. There is a slight increase in the shap value
+> with the hue changing towards the red as the daily rate increases.
+> There is much more variation in cancellations for ADR’s up to 150,
+> with the hue also dominated by blue, implying earlier weeks in the
+> year. The plot suggests an increased risk of cancellation for bookings
+> with a higher ADR, but only slightly. It is also apparent that
+> bookings with a low ADR are more likely to be followed through with,
+> with free bookings almost never being
+canceled.
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-163-1.png" width="720" />
+
+> The plot above displays the week of arrival vs the lead time.
+> Something that is immediately observed is the shape of the plot, with
+> more variability towards the beginning and end of the year and more
+> concentrated points during summer months. Bookings considered a
+> potential for cancellation are above zero, with less risky bookings
+> below zero. An interesting feature can be observed between week 10 and
+> week 50, bookings with a greater lead time make a “u” shape, starting
+> above zero in spring, dipping below zero during the summer months and
+> increasing above zero again as fall and winter approach. This points
+> to a seasonal trend in the influence of lead time. Booking further out
+> is conducive to cancellations except in the summer months.
+
+### Export final model for web application
+
+Our catboost model makes the final cut because of it’s interpretability,
+speed and ability to handle categorical features. The shap library
+allowed us to understand which featrues are influencing predictions and
+how they relate individually with each other. This is an advantage that
+cannot be matched with our random forest model. With the catboost model
+we have the ability to adapt to changes in the booking industry as well,
+as new features become available our model will be able to adapt and run
+efficiently for quick prediction and outreach. We will export the model
+as a pickle file for our hotel explorer web app as our final step.
 
 ``` python
-print("Mean AUC Score - Random Forest: ", rfc_cv_score.mean())
+import joblib
+
+filename = '/Users/mattmerrill/Springboard/Capstone/HotelExplorer_2/finalized_model.pkl'
+joblib.dump(model_final, filename)
 ```
-
-    ## Mean AUC Score - Random Forest:  0.8864701310589705
-
-``` python
-tn, fp, fn, tp = confusion_matrix(y_test, rfc_predict).ravel()
-recall = (tp/(tp + fn))
-specificity = (tn/(tn + fp))
-accuracy = (tp+tn)/(tp+fp+fn+tn)
-print(recall, specificity, accuracy)
-```
-
-    ## 0.6954757252367353 0.9012927013460086 0.8248317837898205
-
-> We see here an overall improvement with Random Forests, the accuracy
-> score improved from 0.70 to 0.83 after tuning the hyperparameters and
-> using cross validation. Next I will implement Gradient Boosting to see
-> if this can’t be improved upon.
-
-### Gradient Boosting
-
-``` python
-from sklearn.ensemble import GradientBoostingClassifier
-
-# Learning rate to fit over, keeping hyperparameters from before
-lr_list = [0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
-
-for learning_rate in lr_list:
-    gb_clf = GradientBoostingClassifier(n_estimators=160, learning_rate=learning_rate,
-    max_features='sqrt', max_depth=260, random_state=4)
-    gb_clf.fit(X_train, y_train)
-
-    print("Learning rate: ", learning_rate)
-    print("Accuracy score (training): {0:.3f}".format(gb_clf.score(X_train, y_train)))
-    print("Accuracy score (validation): {0:.3f}".format(gb_clf.score(X_test, y_test)))
-```
-
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.05, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  0.05
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.824
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.075, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  0.075
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.824
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.1, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  0.1
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.823
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.25, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  0.25
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.825
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.5, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  0.5
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.822
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.75, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  0.75
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.822
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=1, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  1
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.819
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=1.25, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  1.25
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.820
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=1.5, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  1.5
-    ## Accuracy score (training): 0.985
-    ## Accuracy score (validation): 0.819
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=1.75, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  1.75
-    ## Accuracy score (training): 0.984
-    ## Accuracy score (validation): 0.818
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=2, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-    ## Learning rate:  2
-    ## Accuracy score (training): 0.980
-    ## Accuracy score (validation): 0.806
-
-> The training data is nearing perfect accuracy which suggests some
-> overfitting
-here.
-
-``` python
-# Implement gradient boosting with all tuned hyperparameters, including an optimal learning rate of 0.25
-gb_clf2 = GradientBoostingClassifier(n_estimators=160, learning_rate=0.25, max_features='sqrt', max_depth=260, random_state=4)
-gb_clf2.fit(X_train, y_train)
-```
-
-    ## GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
-    ##                            learning_rate=0.25, loss='deviance', max_depth=260,
-    ##                            max_features='sqrt', max_leaf_nodes=None,
-    ##                            min_impurity_decrease=0.0, min_impurity_split=None,
-    ##                            min_samples_leaf=1, min_samples_split=2,
-    ##                            min_weight_fraction_leaf=0.0, n_estimators=160,
-    ##                            n_iter_no_change=None, presort='deprecated',
-    ##                            random_state=4, subsample=1.0, tol=0.0001,
-    ##                            validation_fraction=0.1, verbose=0,
-    ##                            warm_start=False)
-
-``` python
-predictions = gb_clf2.predict(X_test)
-
-print("Confusion Matrix:")
-```
-
-    ## Confusion Matrix:
-
-``` python
-print(confusion_matrix(y_test, predictions))
-```
-
-    ## [[20133  2378]
-    ##  [ 3900  9406]]
-
-``` python
-print("Classification Report")
-```
-
-    ## Classification Report
-
-``` python
-print(classification_report(y_test, predictions))
-```
-
-    ##               precision    recall  f1-score   support
-    ## 
-    ##            0       0.84      0.89      0.87     22511
-    ##            1       0.80      0.71      0.75     13306
-    ## 
-    ##     accuracy                           0.82     35817
-    ##    macro avg       0.82      0.80      0.81     35817
-    ## weighted avg       0.82      0.82      0.82     35817
-
-``` python
-tn, fp, fn, tp = confusion_matrix(y_test, predictions).ravel()
-recall = (tp/(tp + fn))
-specificity = (tn/(tn + fp))
-accuracy = (tp+tn)/(tp+fp+fn+tn)
-print(recall, specificity, accuracy)
-```
-
-    ## 0.7068991432436494 0.8943627559859624 0.824720104978083
 
 ## Conclusion
 
-The results of machine learning have yielded a model with over an 80%
-accuracy in predicting cancellations. The implications of this work
-bring a myriad of options to lower cancellation rate and increase
-actualized income. Hotels can now include a probability of cancellation
-with each booking, which would allow for them to create focused effort
-towards preventing cancellations and thus optimize the distribution of
-customer channels.
+Our catboost model was chosen for it’s interpretability and speed. The
+model produced an accuracy of approximately 81% and an AUROC of about an
+88%. The most important aspect of our model is its ability to
+distinguish between classes, so the AUROC is our metric of choice. At
+88%, this should give us a good idea of which guests are likely to
+cancel and allow our client to predict in real time if incoming bookings
+are likely to be cancelled. Along with this, we also have a strong
+intuition for what factors play a role in cancelled and non-cancelled
+bookings.
 
-An example of how this work may be taken advantage of would be to employ
-outreach tactics for bookings that have a high probability of cancelling
-with discounted packages, perks and early options to customize stay
-details. This focused effort would lower the overall cancellation rate,
-increasing the actualized daily income and giving more control over
-booking variability. Hotels can now be the ones taking advantage of the
-online travel agency phenomenon by pivoting to meet the market where it
-is by making use of this new innovative market prediction tool.
+The most important indicator turned out to be lead time, with greater
+lead times leading to an increased likelihood for a cancellation. An
+unexpected factor was the week of arrival, while difficult to interpret
+from the shap summary, with our dependency plot we could see how it
+correlates with lead time to dynamically influence cancellations
+throughout popular seasons. Our model also illustrated the importance of
+market segment, with direct, group and online travel agency bookings
+making the final cut as influential factors. While group bookings and
+direct bookings showed clear connections with high potential for
+cancellation and non-cancellation, respectively, online travel agencies
+turned out to be more dynamic than previously assumed.
+
+In our original proposal, it was hypothesized that online travel agency
+bookings would play the greatest role in cancellations due to the
+advertisement of “risk free cancellations” among many of them. In our
+final model, online travel agencies played a minor role in cancellations
+overall. However, when OTA’s are plotted with lead time, we can see that
+OTA bookings made with greater lead times tend to cancel more often, but
+bookings with shorter lead times are typically followed through with.
+
+Among canceled and non-canceled bookings we can create a profile of a
+few key factors that make each more likely. For example, guests with
+extremely short lead times (last minute bookings) and relatively low
+average daily rates are very likely to follow through and arrive for
+their booking. Our profile of a guest likely to cancel can come in many
+forms, one example is a guest who books with an extremely large lead
+time coupled with an expensive average room rate. Cancellations also
+occur more often for greater lead times in the winter seasons.
+
+The implications of this work bring a myriad of options to lower overall
+cancellation rate, increase actualized income and improve customer
+experience for hotels. With the ability to distinguish between possible
+cancellations early on, hotels can create a focused effort towards
+preventing canceled bookings. This would result in an immediate net
+increase in actualized daily income and would incentivize early outreach
+to future travelers. One example of this would be to reach out to high
+risk bookings with discounted packages, perks and early options to
+customize stay details. Hotels can now be the ones taking advantage of
+the online travel agency phenomenon by pivoting to meet the market where
+it is with this cancellation prediction tool.
 
 1.  Hertzfeld, Esther. Study: Cancellation Rate at 40% as OTAs Push Free
     Change Policy. Hotel Management, 23 Apr. 2019,
