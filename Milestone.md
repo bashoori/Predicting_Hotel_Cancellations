@@ -99,14 +99,7 @@ taken to alter these data.
 
 The code below highlights the data wrangling part. I have carried out
 the analysis in the RStudio IDE which also allows me to use Python code
-using the `reticulate`
-package.
-
-``` r
-knitr::opts_chunk$set(fig.width=10, fig.height=5, warning=FALSE, message=FALSE, results=FALSE)
-knitr::opts_chunk$set(global.par = TRUE)
-options(knitr.table.format = "html")
-```
+using the `reticulate` package.
 
 ### Read in the data
 
@@ -116,6 +109,15 @@ hotels = pd.read_csv('https://raw.githubusercontent.com/rfordatascience/tidytues
 
 print(hotels.head())
 ```
+
+    ##           hotel  is_canceled  ...  reservation_status  reservation_status_date
+    ## 0  Resort Hotel            0  ...           Check-Out               2015-07-01
+    ## 1  Resort Hotel            0  ...           Check-Out               2015-07-01
+    ## 2  Resort Hotel            0  ...           Check-Out               2015-07-02
+    ## 3  Resort Hotel            0  ...           Check-Out               2015-07-02
+    ## 4  Resort Hotel            0  ...           Check-Out               2015-07-03
+    ## 
+    ## [5 rows x 32 columns]
 
 ### Cleaning steps
 
@@ -191,6 +193,8 @@ else:
     print(hotels.name + ' does contain null values')
 ```
 
+    ## Hotels contains no null values
+
 ## Exploratory Data Analysis:
 
 Exploratory analysis is an opportunity to find unexpected trends in the
@@ -213,7 +217,48 @@ will be provided at the end of this report.
 
 ### Categorical Columns
 
+    ##                           count unique  ...      first       last
+    ## hotel                    119190      2  ...        NaT        NaT
+    ## arrival_date_month       119190     12  ...        NaT        NaT
+    ## meal                     119190      5  ...        NaT        NaT
+    ## country                  119190    178  ...        NaT        NaT
+    ## market_segment           119190      7  ...        NaT        NaT
+    ## distribution_channel     119190      3  ...        NaT        NaT
+    ## reserved_room_type       119190     10  ...        NaT        NaT
+    ## assigned_room_type       119190     12  ...        NaT        NaT
+    ## deposit_type             119190      3  ...        NaT        NaT
+    ## agent                    119190    333  ...        NaT        NaT
+    ## company                  119190    352  ...        NaT        NaT
+    ## customer_type            119190      4  ...        NaT        NaT
+    ## reservation_status       119190      3  ...        NaT        NaT
+    ## reservation_status_date  119190    926  ... 2014-10-17 2017-09-14
+    ## kids                     119190      2  ...        NaT        NaT
+    ## 
+    ## [15 rows x 6 columns]
+
 ### Numerical Columns
+
+    ##                                    count         mean  ...     75%     max
+    ## is_canceled                     119190.0     0.370694  ...     1.0     1.0
+    ## lead_time                       119190.0   104.151036  ...   161.0   737.0
+    ## arrival_date_year               119190.0  2016.156137  ...  2017.0  2017.0
+    ## arrival_date_week_number        119190.0    27.167254  ...    38.0    53.0
+    ## arrival_date_day_of_month       119190.0    15.799119  ...    23.0    31.0
+    ## stays_in_weekend_nights         119190.0     0.928140  ...     2.0    19.0
+    ## stays_in_week_nights            119190.0     2.502156  ...     3.0    50.0
+    ## adults                          119190.0     1.857639  ...     2.0    55.0
+    ## children                        119190.0     0.104052  ...     0.0    10.0
+    ## babies                          119190.0     0.007803  ...     0.0     2.0
+    ## is_repeated_guest               119190.0     0.031941  ...     0.0     1.0
+    ## previous_cancellations          119190.0     0.087264  ...     0.0    26.0
+    ## previous_bookings_not_canceled  119190.0     0.137310  ...     0.0    72.0
+    ## booking_changes                 119190.0     0.221327  ...     0.0    21.0
+    ## days_in_waiting_list            119190.0     2.325044  ...     0.0   391.0
+    ## adr                             119190.0   101.803392  ...   126.0  5400.0
+    ## required_car_parking_spaces     119190.0     0.062614  ...     0.0     8.0
+    ## total_of_special_requests       119190.0     0.571936  ...     1.0     5.0
+    ## 
+    ## [18 rows x 8 columns]
 
 #### Initial findings of numeric columns:
 
@@ -236,7 +281,7 @@ company.
 
 ### How are bookings and cancellations distributed among different types of customers?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-22-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-20-1.png" width="960" />
 
 > It looks like most bookings are from transient guests, with 75% of
 > bookings coming from this area. They account for a larger percent of
@@ -245,7 +290,7 @@ company.
 
 ### What is the most common means of booking? Through which booking channel do most cancellations occur?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-24-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-22-1.png" width="960" />
 
 > The most common means of booking is through an online TA, with over
 > 47% of customers going through this channel. Online TA’s do account
@@ -257,11 +302,11 @@ company.
 > cancellations, this being about a 15% cancellation rate among direct
 > bookings. This compares starkly to online TA bookings, where 37% of
 > those bookings are
-canceled.
+    canceled.
 
 ### How have customer channels changed over time?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-26-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-24-1.png" width="960" />
 
 > In the 2015 group, offline and online TA’s made up a majority of
 > bookings, with a little over a quarter of bookings distributed to each
@@ -274,7 +319,7 @@ canceled.
 
 ### How has the rate of cancellations changed over time?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-28-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-26-1.png" width="960" />
 
 > Groups were the major contributors to cancellations in 2015, with 47%
 > of cancellations originating from this channel. However there was a
@@ -317,11 +362,11 @@ bookings through an online TA with the resort hotel increasing their
 portion to 51%. It is clear that both increased significantly over time
 with the city hotel taking a major leap from 2015 to 2016, increasing
 from 22% to
-52%.
+    52%.
 
 ### Does lead time correlate to cancellations?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-30-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-28-1.png" width="960" />
 
   - The median lead time for canceled bookings is 113
   - The median lead time for not canceled bookings is 46
@@ -334,7 +379,7 @@ time.
 
 ### Do people who book through online travel agencies have larger median lead times?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-32-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-30-1.png" width="960" />
 
   - The median lead time for OTA bookings was 113
   - The median lead time for all other methods of booking was 113
@@ -346,13 +391,13 @@ cancellation.
 
 ### What trends are there in the distribution of company and travel agent bookings?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-34-1.png" width="1152" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-32-1.png" width="1152" />
 \> There are over 300 different companies but a vast majority of
 visitors do not go through them for booking. The ‘0’ company represents
 guests who did not go through a
 company.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-35-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-33-1.png" width="960" />
 
 > The story seems to be different for travel agents, a majority use this
 > channel with most going through agent
@@ -360,25 +405,9 @@ company.
 
 ### How are cancellations distributed throughout the year?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-39-1.png" width="1440" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-37-1.png" width="1440" />
 
-``` python
-dStart = hotels.projected_arrival.min() # start of data
-dEnd = hotels.projected_arrival.max() # end of data
-timeseries_frequency_plot(
-                         'Resort Hotel', 
-                          hotels[hotels.hotel=='Resort Hotel'], 
-                         'reservation_status_date', 
-                         'is_canceled', 
-                         dStart,
-                         dEnd, 
-                         'W', 
-                         'M', 
-                         yearly_mark
-)
-```
-
-<img src="Milestone_files/figure-gfm/unnamed-chunk-40-1.png" width="1440" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-38-1.png" width="1440" />
 
 > In 2016, each hotel saw a slight dip in cancellations during the
 > summer months but this pattern does not seem to hold for the years
@@ -391,7 +420,7 @@ confirmed.
 
 ### How does the average daily rate change with family size?
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-42-1.png" width="536" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-40-1.png" width="536" />
 
 > The average revenue increases on average as family size increases for
 > both hotels. This should not come as a suprise, as the number of
@@ -460,11 +489,32 @@ we can reject it if our test statistic is greater than our critical
 value. Below is an analysis of each of the identified variables with the
 result.
 
+    ## market_segment  Aviation  Complementary  ...  Offline TA/TO  Online TA
+    ## is_canceled                              ...                          
+    ## 0                    185            646  ...          15871      35619
+    ## 1                     52             97  ...           8303      20709
+    ## 
+    ## [2 rows x 7 columns]
+
 > The table of observed values for market segment is displayed above. If
 > we want to determine statistical significance, we need to compare
 > expected cancellation rates to the observed. Our assumption (null
 > hypothesis) is that there is no relationship between each categorical
 > feature and the likelihood of cancellation.
+
+    ## Results from chi-squared test for categorical features:
+
+    ##                              p_val                 result
+    ## hotel                            0  Dependent (reject H0)
+    ## country                          0  Dependent (reject H0)
+    ## market_segment                   0  Dependent (reject H0)
+    ## distribution_channel             0  Dependent (reject H0)
+    ## reserved_room_type    3.02495e-134  Dependent (reject H0)
+    ## agent                            0  Dependent (reject H0)
+    ## company               2.70538e-298  Dependent (reject H0)
+    ## customer_type                    0  Dependent (reject H0)
+    ## kids                   9.14087e-06  Dependent (reject H0)
+    ## projected_arrival                0  Dependent (reject H0)
 
 > The null hypothesis is rejected for each of the tested columns,
 > suggesting an association with cancellations for each variable. The
@@ -487,7 +537,13 @@ cancellations.
 
 #### Determining significance for average daily rate
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-47-1.png" width="1152" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-45-1.png" width="1152" />
+
+    canceled bookings:
+
+    # mean daily rate 104.96
+
+    # standard deviation 52.57
 
 > The null hypothesis for the average daily rate is that it has no
 > influence on whether or not a booking is likely to be canceled. We
@@ -496,15 +552,36 @@ cancellations.
 
 #### Results of t-test for average daily rate
 
+    Results from statistical analysis of average daily rate:
+
+    # t-statistic: 16.546365104386073
+    # p-value: 1.9920066443652475e-61
+
 > A p-value close to zero suggests that the outcome is statistically
 > significant because the liklihood of observing this outcome is ruled
 > as statistically close to zero. Thus we can conclude that the average
 > daily rate is important in determining if a booking will be canceled.
 > Next we will determine the significance of each of the other
 > continuous variables and enter the results in a data frame to be
-> analyzed. The following code summarizes the findings.
+> analyzed. The following code summarizes the
+    findings.
 
 ### Restuls of t-test for all numeric variables
+
+    Statistical results for all numeric variables:
+
+    ##                                  t_stat         p_val                 result
+    ## lead_time                       105.775             0  Dependent (reject H0)
+    ## arrival_date_year               5.87725   4.18254e-09  Dependent (reject H0)
+    ## arrival_date_month              3.71047   0.000206967  Dependent (reject H0)
+    ## arrival_date_week_number        2.72631    0.00640554  Dependent (reject H0)
+    ## arrival_date_day_of_month      -2.03508     0.0418454  Dependent (reject H0)
+    ## babies                         -11.7952   4.30387e-32  Dependent (reject H0)
+    ## is_repeated_guest                -29.41  1.95515e-189  Dependent (reject H0)
+    ## previous_cancellations          38.2605             0  Dependent (reject H0)
+    ## previous_bookings_not_canceled -19.8637   1.16362e-87  Dependent (reject H0)
+    ## days_in_waiting_list            18.7213   4.30307e-78  Dependent (reject H0)
+    ## adr                             16.5464   1.99201e-61  Dependent (reject H0)
 
 Our findings suggest a large number of significant features to use in
 our model. However each of the confirmed statistically significant
@@ -537,6 +614,34 @@ Eliminated sources of data leakage:
 
 ### Selected features from statistical analysis phase
 
+    ##                        count unique         top    freq
+    ## hotel                 119190      2  City Hotel   79131
+    ## country               119190    178         PRT   48563
+    ## market_segment        119190      7   Online TA   56328
+    ## distribution_channel  119190      3       TA/TO   97869
+    ## reserved_room_type    119190     10           A   85838
+    ## agent                 119190    333           9   31959
+    ## company               119190    352           0  112394
+    ## customer_type         119190      4   Transient   89418
+    ## kids                  119190      2     no_kids  109861
+
+    ##                                  count unique        top  ...   50%   75%   max
+    ## projected_arrival               119190    793 2015-12-05  ...   NaN   NaN   NaN
+    ## lead_time                       119190    NaN        NaT  ...    69   161   737
+    ## arrival_date_year               119190    NaN        NaT  ...  2016  2017  2017
+    ## arrival_date_month              119190    NaN        NaT  ...     7     9    12
+    ## arrival_date_week_number        119190    NaN        NaT  ...    28    38    53
+    ## arrival_date_day_of_month       119190    NaN        NaT  ...    16    23    31
+    ## babies                          119190    NaN        NaT  ...     0     0     2
+    ## is_repeated_guest               119190    NaN        NaT  ...     0     0     1
+    ## previous_cancellations          119190    NaN        NaT  ...     0     0    26
+    ## previous_bookings_not_canceled  119190    NaN        NaT  ...     0     0    72
+    ## days_in_waiting_list            119190    NaN        NaT  ...     0     0   391
+    ## adr                             119190    NaN        NaT  ...  94.5   126  5400
+    ## is_canceled                     119190    NaN        NaT  ...     0     1     1
+    ## 
+    ## [13 rows x 13 columns]
+
 ## Feature Engineering
 
 This phase will transform our features to provide our model with data in
@@ -559,7 +664,17 @@ overfitting if we keep the guest counts, so it is best here to bin them
 into “babies” or “no babies”. Along with this, previous bookings and
 previous bookings that were not canceled account for less than a few
 percent of each variable, for best results we will group these into a
-binary representation as well.
+binary representation as
+    well.
+
+    ##   babies  days_in_waiting_list  ...  previous_cancellations  previous_cancellations
+    ## 0      0                     0  ...                       0                       0
+    ## 1      0                     0  ...                       0                       0
+    ## 2      0                     0  ...                       0                       0
+    ## 3      0                     0  ...                       0                       0
+    ## 4      0                     0  ...                       0                       0
+    ## 
+    ## [5 rows x 5 columns]
 
 ### Normalize variables for logistic regression
 
@@ -570,7 +685,7 @@ it is able to handle variations in numerical data, so we will also keep
 the original
 column.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-66-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-64-1.png" width="960" />
 
 ``` python
 # apply sqrt tranformation for daily rate, skewness reduced to -0.38
@@ -579,7 +694,7 @@ data['lead_time_sqrt'] = np.sqrt(data.lead_time)
 data.replace(np.nan, 0, inplace=True)
 ```
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-68-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-66-1.png" width="960" />
 
 ### Group low-frequency entries into ‘other’
 
@@ -587,9 +702,23 @@ Country and agent have over 150 categories, where many are less than a
 few hundred representations in the data. To aid our Random Forest model
 in predicting a correct split, we will reduce the cardinality
 significantly. This will result in less information, but it will aid in
-preventing overfitting.
+preventing
+overfitting.
+
+``` python
+data[['country', 'market_segment', 'agent', 'reserved_room_type']] = data[['country', 'market_segment', 
+                                                                           'agent', 'reserved_room_type']]\
+                                                    .where(data[['country', 'market_segment', 'agent', 
+                                                                 'reserved_room_type']]\
+                                                    .apply(lambda x: x.map(x.value_counts()))>=2000, "other")
+```
 
 ### Convert reserved room type to numeric using average price
+
+    Room Pricing: 
+    
+    [(A, 90.76042918054331), (D, 120.6651850114668), (E, 124.3853472649046), (F,
+    167.68965136347904), (G, 175.99602674307576), (other, 136.62162101313285)]
 
 ``` python
 # Map numeric to room type based on cost of room
@@ -599,13 +728,16 @@ data.reserved_room_type = data.reserved_room_type.map(d)
 
 ### Grouped Plots
 
+<img src="Milestone_files/figure-gfm/unnamed-chunk-72-1.png" width="960" />
+
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-73-1.png" width="960" />
+
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-74-1.png" width="960" />
+
+
 <img src="Milestone_files/figure-gfm/unnamed-chunk-75-1.png" width="960" />
-
-<img src="Milestone_files/figure-gfm/unnamed-chunk-76-1.png" width="960" />
-
-<img src="Milestone_files/figure-gfm/unnamed-chunk-77-1.png" width="960" />
-
-<img src="Milestone_files/figure-gfm/unnamed-chunk-78-1.png" width="960" />
 
 ### Data leakage
 
@@ -617,7 +749,7 @@ innaccurate and misleading for the model. This can be observed in the
 plot
 below.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-79-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-76-1.png" width="960" />
 
 ``` python
 # drop country column to avoid data leakage
@@ -625,6 +757,36 @@ data = data.drop('country', axis=1)
 ```
 
 ### Final representation of numeric and categorical columns
+
+                                        count unique  ...      75%      max
+    ## reserved_room_type              119190    NaN  ...        2        6
+    ## company                         119190    NaN  ...        0        1
+    ## projected_arrival               119190    793  ...      NaN      NaN
+    ## lead_time                       119190    NaN  ...      161      737
+    ## arrival_date_year               119190    NaN  ...     2017     2017
+    ## arrival_date_month              119190    NaN  ...        9       12
+    ## arrival_date_week_number        119190    NaN  ...       38       53
+    ## arrival_date_day_of_month       119190    NaN  ...       23       31
+    ## previous_cancellations          119190    NaN  ...        0        1
+    ## previous_bookings_not_canceled  119190    NaN  ...        0        1
+    ## days_in_waiting_list            119190    NaN  ...        0        1
+    ## adr                             119190    NaN  ...      126     5400
+    ## is_canceled                     119190    NaN  ...        1        1
+    ## adr_sqrt                        119190    NaN  ...   11.225  73.4847
+    ## lead_time_sqrt                  119190    NaN  ...  12.6886  27.1477
+    ## avg_price_per_room              119190    NaN  ...  120.665  175.996
+    ## 
+    ## [16 rows x 13 columns]
+
+                              count unique         top    freq
+    ## hotel                 119190      2  City Hotel   79131
+    ## market_segment        119190      6   Online TA   56328
+    ## distribution_channel  119190      3       TA/TO   97869
+    ## agent                 119190      9       other   36445
+    ## customer_type         119190      4   Transient   89418
+    ## kids                  119190      2     no_kids  109861
+    ## babies                119190      2           0  118275
+    ## is_repeated_guest     119190      2           0  115383
 
 ## Logistic regression
 
@@ -652,6 +814,15 @@ true).
 
 #### Logistic Regression Data
 
+          adr_sqrt  agent_0  ...  previous_cancellations  reserved_room_type
+    ## 0  0.000000        1  ...                       0                   4
+    ## 1  0.000000        1  ...                       0                   4
+    ## 2  8.660254        1  ...                       0                   1
+    ## 3  8.660254        0  ...                       0                   1
+    ## 4  9.899495        0  ...                       0                   1
+    ## 
+    ## [5 rows x 27 columns]
+
 ### Split the Data into train and test
 
 ``` python
@@ -676,9 +847,13 @@ y_pred = logreg.predict(X_test)
 accuracy_score(y_test, y_pred)
 ```
 
+    ## 0.7520345666582767
+
 ### Plot the ROC curve.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-90-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-87-1.png" width="672" />
+
+     AUROC Score: 0.8000339323086338
 
 > Our benchmark is a ~75% accuracy and an ~80% AUROC score. Let’s see if
 > we can improve this with KFold cross validation and some parameter
@@ -686,18 +861,34 @@ accuracy_score(y_test, y_pred)
 
 ### Cross-validation accuracy score
 
+    ## 0.7514053104952632
+
 ### Ridge (L1) and Lasso (L2) Feature Selection
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-95-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-92-1.png" width="672" />
+
+    ## The top mean score is 0.7513528699106534, with an alpha of 1.325711365590108
 
 > Lasso may give us better results, as we are using a significant number
 > of predictors at this point and zero-ing some out may be a better
 > approach than dampening with
 ridge.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-97-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-94-1.png" width="672" />
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-99-1.png" width="2400" />
+    ## The top mean score is 0.7514472562538294, with an alpha of 0.2442053094548651
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-96-1.png" width="2400" />
+
+    ## Influential Features for Logistic Regression model:
+
+           coefficients                         feature
+    ## 10     -1.267314                         company
+    ## 12      1.772309         customer_type_Transient
+    ## 19     -1.523472           market_segment_Direct
+    ## 22     -1.619775        market_segment_Online TA
+    ## 23     -3.875667  previous_bookings_not_canceled
+    ## 24      4.899943          previous_cancellations
 
 > Feature selection with L2 penalty has put a lot of importance on
 > binary features with clear correlations to cancellations. For example,
@@ -710,7 +901,15 @@ model.
 
 ### Final Logistic Regression Model using L1 regularization for eliminating non-contributing features
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-102-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-99-1.png" width="672" />
+
+     Accuracy Score:
+
+    ## 0.7522023659702995
+
+     AUROC Score:
+
+    ## 0.7997510824623338
 
 The final accuracy score with our penalized model imporved very little
 from the out of box score. There were also some questionable choices for
@@ -745,13 +944,34 @@ by hotel personel. The final model with tuning will most likely overfit
 however, to combat this we will do some feature selection with sci-kit
 learns permutation importance method and will prioritize usability over
 small metric
-improvements.
+    improvements.
 
 ### Default parameter Random Forest classifier
 
+    Confusion Matrix
+    ## [[13442  1597]
+    ##  [ 2426  6373]]
+
+    ##               precision    recall  f1-score   support
+    ## 
+    ##            0       0.85      0.89      0.87     15039
+    ##            1       0.80      0.72      0.76      8799
+    ## 
+    ##     accuracy                           0.83     23838
+    ##    macro avg       0.82      0.81      0.81     23838
+    ## weighted avg       0.83      0.83      0.83     23838
+
+    Accuracy Score:
+
+    ## 0.8312358419330481
+
 ### Plot Random Forests ROC curve
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-109-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-106-1.png" width="672" />
+
+    AUROC Score:
+
+    ## 0.9025182364621541
 
 > Immediately we see a significant improvement with Random Forests. Our
 > accuracy score jumped from 75% to 83% and our AUROC improved from 80%
@@ -773,11 +993,12 @@ features [\[Permutation Importance vs Random Forest Feature
 Importance\]](https://scikit-learn.org/stable/auto_examples/inspection/plot_permutation_importance.html).
 Based on the results here, we can move forward with tuning and finalize
 our model for
-production.
+    production.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-111-1.png" width="1152" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-108-1.png" width="1152" />
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-112-1.png" width="1152" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-109-1.png" width="1152" />
 
 Our training set seems to be overfitting on the date of arrival but a
 number of other features share common importance. Lead time and average
@@ -785,29 +1006,90 @@ daily rate seem to be dominating the models evaluation. Our selected
 features for our next model will be a mix of features that are observed
 as significant in the plots above mixed with features identified as
 important from the exploratory phase, such as online travel agency
-bookings and direct
-bookings.
+bookings and direct bookings.
 
 ### Re-run model with selected features
 
+    selected features dataframe:
+
+    ##    previous_cancellations  lead_time  ...  agent_9.0  is_canceled
+    ## 0                       0        342  ...          0            0
+    ## 1                       0        737  ...          0            0
+    ## 2                       0          7  ...          0            0
+    ## 3                       0         13  ...          0            0
+    ## 4                       0         14  ...          0            0
+    ## 
+    ## [5 rows x 13 columns]
+
 ### Default parameter Random Forest classifier
+    
+    Confusion Matrix
+    ## [[13351  1688]
+    ##  [ 2549  6250]]
+
+    ##               precision    recall  f1-score   support
+    ## 
+    ##            0       0.84      0.89      0.86     15039
+    ##            1       0.79      0.71      0.75      8799
+    ## 
+    ##     accuracy                           0.82     23838
+    ##    macro avg       0.81      0.80      0.80     23838
+    ## weighted avg       0.82      0.82      0.82     23838
+
+    Accuracy Score with selected features:
+
+    ## 0.8222585787398272
 
 ### Feature importance for selected features
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-118-1.png" width="1152" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-115-1.png" width="1152" />
 
 ### Plot Random Forests ROC curve
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-119-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-116-1.png" width="672" />
+
+    AUROC Score:
+
+    ## 0.893151220472262
 
 We have sacrificed a minor drop in accuracy and AUROC score for limiting
 our features from 36 to 11. The complexity of the model has dropped
 significantly which will help with processing speed and
 interpretability. We can see now the importance of features not
 previously considered, like average daily rate and arrival date; these
-are now seen as significant indicators of a potential cancellation.
+are now seen as significant indicators of a potential
+    cancellation.
 
 ### Cross-validation with default parameters and selected features
+
+    Confusion Matrix
+    ## [[13351  1688]
+    ##  [ 2549  6250]]
+
+    ## === Classification Report ===
+
+    ##               precision    recall  f1-score   support
+    ## 
+    ##            0       0.84      0.89      0.86     15039
+    ##            1       0.79      0.71      0.75      8799
+    ## 
+    ##     accuracy                           0.82     23838
+    ##    macro avg       0.81      0.80      0.80     23838
+    ## weighted avg       0.82      0.82      0.82     23838
+
+    === All AUC Scores ===
+
+    ## [0.88497734 0.88482791 0.88769668 0.88378578 0.88552145]
+
+    === Mean CV AUC Score ===
+
+    Mean AUC Score - Random Forest:
+    
+    ## 0.8853618291543656
+
+    AUROC Score for validation set:
+
+    ## 0.893151220472262
 
 > Our cross-validated AUROC score is around our 90% benchmark with only
 > a minor overall loss from reducing the number of features.
@@ -819,12 +1101,36 @@ parameters for our random forest model. The cost of running our
 randomized search is that our model may overfit and run slower than
 preferred. If the results from the search show significant enough
 improvement however, the trade-off may be worth the ability to predict
-and understand factors that go into potential
-cancellations.
+and understand factors that go into potential cancellations.
+
+    Best Parameters:
+
+    ## {'n_estimators': 644, 'min_samples_split': 5, 'min_samples_leaf': 1, 'max_features': 'auto', 'max_depth': 100, 'bootstrap': True}
+
+    Confusion Matrix
+    ## [[13492  1547]
+    ##  [ 2713  6086]]
+
+    ##               precision    recall  f1-score   support
+    ## 
+    ##            0       0.83      0.90      0.86     15039
+    ##            1       0.80      0.69      0.74      8799
+    ## 
+    ##     accuracy                           0.82     23838
+    ##    macro avg       0.81      0.79      0.80     23838
+    ## weighted avg       0.82      0.82      0.82     23838
+
+    Accuracy Score:
+
+    ## 0.8212937326956959
 
 ### Plot Tuned Random Forests ROC curve
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-128-1.png" width="960" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-125-1.png" width="672" />
+
+    Tuned AUROC Score:
+
+    ## 0.8953199274038124
 
 Little improvement was observed with parameter tuning using Random
 Forests. The final model is costly in run time and may slow down our web
@@ -873,6 +1179,10 @@ model.fit(
 );
 ```
 
+    ## <IPython.core.display.HTML object>
+    ## MetricVisualizer(layout=Layout(align_self='stretch', height='500px'))
+    ## <catboost.core.CatBoostClassifier object at 0x7facc6334e90>
+
 #### Cross-validation
 
 ``` python
@@ -888,11 +1198,26 @@ cv_data = cv(
 )
 ```
 
+    ## <IPython.core.display.HTML object>
+    ## MetricVisualizer(layout=Layout(align_self='stretch', height='500px'))
+
+    Best validation Logloss score, not stratified: 
+    
+    ## 0.4202±0.0031 on step 999
+
+    Best AUROC:
+
+    ## 0.8657714969282039
+
+    Best Accuracy:
+
+    ## 0.7912660890116116
+
 ### Feature Importance
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-140-1.png" width="768" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-137-1.png" width="768" />
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-141-1.png" width="768" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-138-1.png" width="768" />
 
 > The results of the shap summary plot reveal how each feature impacts
 > the model output. Each dot represents a prediction, with red
@@ -907,10 +1232,18 @@ cv_data = cv(
 > run the model again. Some features that do not show strong importance
 > will be used because of the discoveries made during the exploratory
 > analysis phase. Although online TA and direct bookings are not high on
-> the list, these were of clear importance in our exploratory
-plots.
+> the list, these were of clear importance in our exploratory plots.
 
 #### Final dataframe for catboost model
+
+    ##    previous_cancellations  lead_time  ...  agent_9.0  is_canceled
+    ## 0                       0        342  ...          0            0
+    ## 1                       0        737  ...          0            0
+    ## 2                       0          7  ...          0            0
+    ## 3                       0         13  ...          0            0
+    ## 4                       0         14  ...          0            0
+    ## 
+    ## [5 rows x 13 columns]
 
 ### Re-run model with selected features
 
@@ -933,6 +1266,10 @@ model.fit(
 );
 ```
 
+    ## <IPython.core.display.HTML object>
+    ## MetricVisualizer(layout=Layout(align_self='stretch', height='500px'))
+    ## <catboost.core.CatBoostClassifier object at 0x7facc8ef9850>
+
 ``` python
 #Cross validation
 cv_params = model.get_params()
@@ -946,9 +1283,24 @@ cv_data = cv(
 )
 ```
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-149-1.png" width="768" />
+    ## <IPython.core.display.HTML object>
+    ## MetricVisualizer(layout=Layout(align_self='stretch', height='500px'))
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-150-1.png" width="768" />
+    Best validation Logloss score, not stratified: 
+    
+    ## 0.4349±0.0042 on step 999
+
+    Best AUROC:
+
+    ## 0.8547546576309824
+
+    Best Accuracy:
+
+    ## 0.7840339109958016
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-146-1.png" width="768" />
+
+<img src="Milestone_files/figure-gfm/unnamed-chunk-147-1.png" width="768" />
 
 Our initial model with selected features is putting a lot of importance
 on lead time and previous cancellations. We can see the benefit of using
@@ -1000,6 +1352,8 @@ model_selected1.fit(
 )
 ```
 
+    ## <catboost.core.CatBoostClassifier object at 0x7fab6843d590>
+
 ``` python
 model_selected2.fit(
     X_train, y_train,
@@ -1008,6 +1362,8 @@ model_selected2.fit(
     verbose=False
 )
 ```
+
+    ## <catboost.core.CatBoostClassifier object at 0x7fab6843d790>
 
 ### Run with optimal learning rate
 
@@ -1031,13 +1387,52 @@ model_final.fit(
 )
 ```
 
+    ## <IPython.core.display.HTML object>
+    ## MetricVisualizer(layout=Layout(align_self='stretch', height='500px'))
+    ## <catboost.core.CatBoostClassifier object at 0x7fab69ce1310>
+
+    Tree count: 2651
+
 #### Cross-validation data
+
+    ##    iterations  test-Logloss-mean  ...  train-Accuracy-mean  train-Accuracy-std
+    ## 0           0           0.608172  ...             0.742774            0.000650
+    ## 1           1           0.563816  ...             0.745843            0.000740
+    ## 2           2           0.539643  ...             0.746392            0.000785
+    ## 3           3           0.520762  ...             0.747286            0.000682
+    ## 4           4           0.510199  ...             0.748779            0.001479
+    ## 
+    ## [5 rows x 11 columns]
+
+    Best validation Logloss score, not stratified: 
+    ## 0.3977±0.0030 on step 2471
+
+    Best AUROC:
+
+    ## 0.8810244878941139
+
+    Best Accuracy:
+
+    ## 0.8092289621612551
+
+    ## iterations             2230.000000
+    ## test-Logloss-mean         0.397786
+    ## test-Logloss-std          0.002800
+    ## train-Logloss-mean        0.298056
+    ## train-Logloss-std         0.000861
+    ## test-AUC-mean             0.880097
+    ## test-AUC-std              0.001833
+    ## test-Accuracy-mean        0.807182
+    ## test-Accuracy-std         0.003972
+    ## train-Accuracy-mean       0.873374
+    ## train-Accuracy-std        0.000454
+    ## Name: 2230, dtype: float64
 
 ### Feature importance
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-159-1.png" width="768" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-156-1.png" width="768" />
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-160-1.png" width="768" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-157-1.png" width="768" />
 
 Increasing the iterations and selecting the learning rate has
 significantly improved our model. The summary plot of our tuned model
@@ -1060,7 +1455,7 @@ the opposite. For our most important predictors we want to get an idea
 of what is driving
 cancellations.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-161-1.png" width="720" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-158-1.png" width="720" />
 
 > The color of the plot is labeled as relating to bookings made through
 > an OTA, with red meaning the guest did use this means of booking. What
@@ -1075,7 +1470,7 @@ cancellations.
 > cancellation than other
 means.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-162-1.png" width="720" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-159-1.png" width="720" />
 
 > The plot above displays the average daily rate, with the hue related
 > to the week of arrival. There is a slight increase in the shap value
@@ -1088,7 +1483,7 @@ means.
 > with free bookings almost never being
 canceled.
 
-<img src="Milestone_files/figure-gfm/unnamed-chunk-163-1.png" width="720" />
+<img src="Milestone_files/figure-gfm/unnamed-chunk-160-1.png" width="720" />
 
 > The plot above displays the week of arrival vs the lead time.
 > Something that is immediately observed is the shape of the plot, with
